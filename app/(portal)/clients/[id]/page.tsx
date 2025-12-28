@@ -77,14 +77,19 @@ export default function ClientDetailPage() {
           <CardContent className="space-y-3 text-sm text-slate-600">
             {Object.entries(client.balances).map(([key, value]) => {
               if (key === "other" && value && typeof value === "object") {
-                return Object.entries(value).map(([program, points]) => (
-                  <div key={program} className="flex items-center justify-between">
-                    <span className="capitalize">{program}</span>
-                    <span className="font-semibold text-slate-900">
-                      {points.toLocaleString()}
-                    </span>
-                  </div>
-                ));
+                return Object.entries(value as Record<string, number>).map(
+                  ([program, points]) => (
+                    <div
+                      key={program}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="capitalize">{program}</span>
+                      <span className="font-semibold text-slate-900">
+                        {points.toLocaleString()}
+                      </span>
+                    </div>
+                  )
+                );
               }
               if (key === "other") {
                 return null;
