@@ -6,6 +6,7 @@ import AwardOptionCard from "@/components/trips/AwardOptionCard";
 import AwardOptionModal, {
   type AwardOptionFormOutput,
 } from "@/components/trips/AwardOptionModal";
+import ImportAwardOptionModal from "@/components/trips/ImportAwardOptionModal";
 import TripHeader from "@/components/trips/TripHeader";
 import TripNextStepBanner from "@/components/trips/TripNextStepBanner";
 import HotelOptionCard from "@/components/hotel-option-card";
@@ -35,6 +36,7 @@ export default function TripDetailPage() {
     mode: "add" | "edit";
     option: AwardOption | null;
   }>({ open: false, mode: "add", option: null });
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [awardSearchMessage, setAwardSearchMessage] = useState<{
     type: "success" | "blocked";
     providerLabel: string;
@@ -42,6 +44,10 @@ export default function TripDetailPage() {
   } | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">(
     "idle"
+  );
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [newlyAddedOptionId, setNewlyAddedOptionId] = useState<string | null>(
+    null
   );
 
   const trip = useMemo(
@@ -135,6 +141,34 @@ export default function TripDetailPage() {
   const showIntakeChecklist =
     trip?.status === "Intake" || trip?.status === "Searching";
 
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [toastMessage]);
+
+  useEffect(() => {
+    if (!newlyAddedOptionId) {
+      return;
+    }
+
+    const element = document.getElementById(
+      `award-option-${newlyAddedOptionId}`
+    );
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    setNewlyAddedOptionId(null);
+  }, [newlyAddedOptionId, orderedAwardOptions]);
+
   const generateHelperText =
     trip?.status !== "Draft Ready"
       ? "Set status to Draft Ready to generate."
@@ -164,25 +198,27 @@ export default function TripDetailPage() {
     );
   }
 
+  const buildAwardOption = (values: AwardOptionFormOutput): AwardOption => ({
+    id: `award_${Date.now()}`,
+    tripId: trip.id,
+    program: values.program,
+    route: values.route,
+    milesRequired: values.milesRequired,
+    feesUSD: values.feesUSD,
+    cashEquivalentUSD: values.cashEquivalentUSD,
+    transferRequired: values.transferRequired,
+    transferTime: values.transferTime,
+    badges: values.badges,
+    createdAt: new Date().toISOString(),
+  });
+
   const handleSaveAwardOption = (values: AwardOptionFormOutput) => {
     if (!trip) {
       return;
     }
 
     if (awardModalState.mode === "add") {
-      const created: AwardOption = {
-        id: `award_${Date.now()}`,
-        tripId: trip.id,
-        program: values.program,
-        route: values.route,
-        milesRequired: values.milesRequired,
-        feesUSD: values.feesUSD,
-        cashEquivalentUSD: values.cashEquivalentUSD,
-        transferRequired: values.transferRequired,
-        transferTime: values.transferTime,
-        badges: values.badges,
-        createdAt: new Date().toISOString(),
-      };
+      const created = buildAwardOption(values);
       portalRepo.addAwardOption(trip.id, created);
     } else if (awardModalState.option) {
       portalRepo.updateAwardOption(trip.id, awardModalState.option.id, {
@@ -197,6 +233,18 @@ export default function TripDetailPage() {
       });
     }
     setAwardModalState({ open: false, mode: "add", option: null });
+  };
+
+  const handleImportAwardOption = (values: AwardOptionFormOutput) => {
+    if (!trip) {
+      return;
+    }
+
+    const created = buildAwardOption(values);
+    portalRepo.addAwardOption(trip.id, created);
+    setImportModalOpen(false);
+    setToastMessage("Award option imported.");
+    setNewlyAddedOptionId(created.id);
   };
 
   const handleRemoveAwardOption = (option: AwardOption) => {
@@ -558,6 +606,13 @@ export default function TripDetailPage() {
                 >
                   + Add Award Option
                 </Button>
+                <Button
+                  variant="default"
+                  onClick={() => setImportModalOpen(true)}
+                  disabled={isClosed}
+                >
+                  Import Award Option
+                </Button>
               </div>
             </div>
 
@@ -566,21 +621,24 @@ export default function TripDetailPage() {
                 {orderedAwardOptions.map((option) => {
                   const isPinned = trip.pinnedAwardOptionId === option.id;
                   return (
-                    <AwardOptionCard
-                      key={option.id}
-                      option={option}
-                      isPinned={isPinned}
-                      isReadOnly={isClosed}
-                      onPin={() => portalRepo.setPinnedAwardOption(trip.id, option.id)}
-                      onEdit={() =>
-                        setAwardModalState({
-                          open: true,
-                          mode: "edit",
-                          option,
-                        })
-                      }
-                      onRemove={() => handleRemoveAwardOption(option)}
-                    />
+                    <div key={option.id} id={`award-option-${option.id}`}>
+                      <AwardOptionCard
+                        option={option}
+                        isPinned={isPinned}
+                        isReadOnly={isClosed}
+                        onPin={() =>
+                          portalRepo.setPinnedAwardOption(trip.id, option.id)
+                        }
+                        onEdit={() =>
+                          setAwardModalState({
+                            open: true,
+                            mode: "edit",
+                            option,
+                          })
+                        }
+                        onRemove={() => handleRemoveAwardOption(option)}
+                      />
+                    </div>
                   );
                 })}
               </div>
@@ -648,6 +706,16 @@ export default function TripDetailPage() {
         }
         onSave={handleSaveAwardOption}
       />
+      <ImportAwardOptionModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        onSave={handleImportAwardOption}
+      />
+      {toastMessage ? (
+        <div className="fixed bottom-6 right-6 z-50 rounded-md bg-slate-900 px-4 py-2 text-sm text-white shadow-lg">
+          {toastMessage}
+        </div>
+      ) : null}
     </div>
   );
 }
