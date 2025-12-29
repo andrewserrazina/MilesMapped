@@ -5,7 +5,7 @@ import Link from "next/link";
 import PageHeader from "@/components/page-header";
 import EmptyState from "@/components/empty-state";
 import StatusBadge from "@/components/common/StatusBadge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -101,9 +101,12 @@ export default function ItinerariesPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/itineraries/${itinerary.id}`}>View</Link>
-                        </Button>
+                        <Link
+                          href={`/itineraries/${itinerary.id}`}
+                          className={buttonVariants({ variant: "ghost", size: "sm" })}
+                        >
+                          View
+                        </Link>
                       </TableCell>
                     </TableRow>
                   );
