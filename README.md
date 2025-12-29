@@ -38,6 +38,17 @@ npm run start
    - Output Directory: `.next`
 4. Click **Deploy**.
 
+### Deployment Notes
+
+- No custom Vercel configuration is required; the app uses the default Next.js
+  runtime and build output.
+- All client-side storage reads occur after hydration, so SSR renders safely
+  without browser-only globals.
+
+### Environment Variables
+
+No environment variables are required for deployment right now.
+
 ## Scripts
 
 - `npm run dev` – start the dev server
