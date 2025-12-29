@@ -9,8 +9,8 @@ import EmptyState from "@/components/common/EmptyState";
 import { Input } from "@/components/ui/input";
 import { buttonVariants } from "@/components/ui/button";
 import type { Client } from "@/lib/types";
-import { usePortalData } from "@/lib/portalStore";
 import { cn } from "@/lib/utils";
+import { portalRepo } from "@/lib/portalRepo";
 
 const statusOptions: Array<Client["status"] | "All"> = [
   "All",
@@ -23,10 +23,11 @@ export default function ClientsPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<(typeof statusOptions)[number]>("All");
-  const { data: portalData, isHydrated } = usePortalData();
+  const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const clients = portalRepo.listClients(portalData);
+  const trips = portalRepo.listTrips(portalData);
 
   const filteredClients = useMemo(() => {
-    const clients = portalData?.clients ?? [];
     return clients.filter((client) => {
       const matchesQuery = client.fullName
         .toLowerCase()
@@ -34,7 +35,7 @@ export default function ClientsPage() {
       const matchesStatus = statusFilter === "All" || client.status === statusFilter;
       return matchesQuery && matchesStatus;
     });
-  }, [portalData, query, statusFilter]);
+  }, [clients, query, statusFilter]);
 
   const hasFilters = query.length > 0 || statusFilter !== "All";
 
@@ -130,8 +131,7 @@ export default function ClientsPage() {
               header: "Trips",
               render: (client: Client) => (
                 <span className="text-sm text-slate-600">
-                  {portalData?.trips.filter((trip) => trip.clientId === client.id)
-                    .length ?? 0}
+                  {trips.filter((trip) => trip.clientId === client.id).length}
                 </span>
               ),
             },

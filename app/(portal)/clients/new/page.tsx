@@ -17,13 +17,12 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Client, ClientStatus } from "@/lib/types";
 import { portalRepo } from "@/lib/portalRepo";
-import { usePortalData } from "@/lib/portalStore";
 
 const statusOptions: ClientStatus[] = ["Lead", "Active", "Completed"];
 
 export default function NewClientPage() {
   const router = useRouter();
-  const { isHydrated } = usePortalData();
+  const { isHydrated } = portalRepo.usePortalData();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");

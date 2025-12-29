@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { buttonVariants } from "@/components/ui/button";
 import { tripStatusOrder } from "@/lib/mock/data";
 import type { Trip } from "@/lib/types";
-import { usePortalData } from "@/lib/portalStore";
 import { cn } from "@/lib/utils";
+import { portalRepo } from "@/lib/portalRepo";
 
 const statusOptions = ["All", ...tripStatusOrder] as const;
 const assignmentFilters = ["All Trips", "My Trips"] as const;
@@ -27,12 +27,11 @@ export default function TripsPage() {
   const [assignmentFilter, setAssignmentFilter] = useState<
     (typeof assignmentFilters)[number]
   >("All Trips");
-  const { data: portalData, isHydrated } = usePortalData();
+  const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const trips = portalRepo.listTrips(portalData);
+  const clients = portalRepo.listClients(portalData);
 
   const filteredTrips = useMemo(() => {
-    const trips = portalData?.trips ?? [];
-    const clients = portalData?.clients ?? [];
-
     return trips.filter((trip) => {
       const client = clients.find((c) => c.id === trip.clientId);
       const matchesQuery =
@@ -44,7 +43,7 @@ export default function TripsPage() {
         trip.assignedAgentName === currentUserName;
       return matchesQuery && matchesStatus && matchesAssignment;
     });
-  }, [portalData, query, statusFilter, assignmentFilter]);
+  }, [assignmentFilter, clients, query, statusFilter, trips]);
 
   const hasFilters =
     query.length > 0 ||
@@ -146,9 +145,7 @@ export default function TripsPage() {
               key: "client",
               header: "Client",
               render: (trip: Trip) => {
-                const client = portalData?.clients.find(
-                  (c) => c.id === trip.clientId
-                );
+                const client = portalRepo.getClient(portalData, trip.clientId);
                 return (
                   <div>
                     <p className="font-semibold text-slate-900">
