@@ -1,13 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import DataTable from "@/components/data-table";
 import EmptyState from "@/components/common/EmptyState";
 import { Input } from "@/components/ui/input";
+import { buttonVariants } from "@/components/ui/button";
 import type { Client } from "@/lib/types";
 import { usePortalData } from "@/lib/portalStore";
+import { cn } from "@/lib/utils";
 
 const statusOptions: Array<Client["status"] | "All"> = [
   "All",
@@ -56,6 +59,14 @@ export default function ClientsPage() {
       <PageHeader
         title="Clients"
         description="Manage client profiles, preferences, and trip history."
+        actions={
+          <Link
+            href="/clients/new"
+            className={cn(buttonVariants(), "whitespace-nowrap")}
+          >
+            + Add Client
+          </Link>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-3">

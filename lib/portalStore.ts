@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { clients, itineraries, trips } from "@/lib/mock/data";
-import type { AwardOption, Itinerary, Trip } from "@/lib/types";
+import type { AwardOption, Client, Itinerary, Trip } from "@/lib/types";
 
 const STORAGE_KEY = "milesmapped.portalData";
 const SCHEMA_VERSION = 1;
@@ -211,5 +211,19 @@ export function addItinerary(itinerary: Itinerary) {
   setPortalData((previous) => ({
     ...previous,
     itineraries: [itinerary, ...previous.itineraries],
+  }));
+}
+
+export function addClient(client: Client) {
+  setPortalData((previous) => ({
+    ...previous,
+    clients: [client, ...previous.clients],
+  }));
+}
+
+export function addTrip(trip: Trip) {
+  setPortalData((previous) => ({
+    ...previous,
+    trips: [normalizeTrip(trip), ...previous.trips],
   }));
 }

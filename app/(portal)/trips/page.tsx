@@ -1,15 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import DataTable from "@/components/data-table";
 import EmptyState from "@/components/common/EmptyState";
 import StatusBadge from "@/components/common/StatusBadge";
 import { Input } from "@/components/ui/input";
+import { buttonVariants } from "@/components/ui/button";
 import { tripStatusOrder } from "@/lib/mock/data";
 import type { Trip } from "@/lib/types";
 import { usePortalData } from "@/lib/portalStore";
+import { cn } from "@/lib/utils";
 
 const statusOptions = ["All", ...tripStatusOrder] as const;
 
@@ -58,6 +61,14 @@ export default function TripsPage() {
       <PageHeader
         title="Trips"
         description="Track active workflows and status-driven milestones."
+        actions={
+          <Link
+            href="/trips/new"
+            className={cn(buttonVariants(), "whitespace-nowrap")}
+          >
+            + Add Trip
+          </Link>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-3">
