@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AwardOption } from "@/lib/types";
 import { usePortalData } from "@/lib/portalStore";
@@ -80,20 +80,30 @@ export default function ItineraryDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6 print-itinerary">
+      <div className="flex flex-wrap items-center justify-between gap-3 print-hidden">
         <Link
           href="/itineraries"
           className="text-sm text-slate-500 hover:text-slate-700"
         >
           ← Back to Itineraries
         </Link>
-        <Link
-          href={`/trips/${trip.id}`}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-        >
-          Open Trip
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => window.print()}
+          >
+            Export PDF
+          </Button>
+          <Link
+            href={`/trips/${trip.id}`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Open Trip
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -105,11 +115,11 @@ export default function ItineraryDetailPage() {
         </p>
       </div>
 
-      <Card>
+      <Card className="print-avoid-break">
         <CardHeader>
           <CardTitle>Trip Summary</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 text-sm text-slate-600 md:grid-cols-4">
+        <CardContent className="grid gap-4 text-sm text-slate-600 md:grid-cols-4 print-single-column">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-400">Route</p>
             <p className="font-semibold text-slate-900">
@@ -135,7 +145,7 @@ export default function ItineraryDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="print-avoid-break">
         <CardHeader>
           <CardTitle>Flight Option A (Pinned Award Option)</CardTitle>
         </CardHeader>
@@ -152,7 +162,7 @@ export default function ItineraryDetailPage() {
                   </Badge>
                 ))}
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2 print-single-column">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-slate-400">
                     Route
@@ -199,7 +209,7 @@ export default function ItineraryDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="print-avoid-break">
         <CardHeader>
           <CardTitle>Backup Options</CardTitle>
         </CardHeader>
@@ -242,7 +252,60 @@ export default function ItineraryDetailPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="print-avoid-break">
+        <CardHeader>
+          <CardTitle>Points + Fees Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-slate-600">
+          {optionA ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-400">
+                  Option A
+                </p>
+                <p className="font-semibold text-slate-900">
+                  {optionA.program} · {optionA.route}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="font-semibold text-slate-900">
+                  {optionA.milesRequired.toLocaleString()} miles
+                </p>
+                <p className="text-xs text-slate-500">${optionA.feesUSD} in fees</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">
+              Pin an award option to see the points and fees breakdown.
+            </p>
+          )}
+          {backupOptions.length ? (
+            backupOptions.map((option) => (
+              <div
+                key={option.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3"
+              >
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-400">
+                    Backup
+                  </p>
+                  <p className="font-semibold text-slate-900">
+                    {option.program} · {option.route}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-slate-900">
+                    {option.milesRequired.toLocaleString()} miles
+                  </p>
+                  <p className="text-xs text-slate-500">${option.feesUSD} in fees</p>
+                </div>
+              </div>
+            ))
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card className="print-avoid-break">
         <CardHeader>
           <CardTitle>How to Book</CardTitle>
         </CardHeader>
@@ -264,7 +327,7 @@ export default function ItineraryDetailPage() {
       </Card>
 
       {itinerary.notes ? (
-        <Card>
+        <Card className="print-avoid-break">
           <CardHeader>
             <CardTitle>Notes</CardTitle>
           </CardHeader>

@@ -44,7 +44,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-slate-100">
-      <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white p-6 md:flex">
+      <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white p-6 md:flex print-hidden">
         <div className="mb-8">
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
             MilesMapped
@@ -64,7 +64,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
       <main className="flex-1 px-6 py-8 md:px-10">
         <div className="mx-auto w-full max-w-6xl space-y-6">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 print-hidden">
             <div className="relative w-full max-w-xl">
               <Input
                 placeholder="Search clients or trips"
