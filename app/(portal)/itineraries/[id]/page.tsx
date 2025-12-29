@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AwardOption } from "@/lib/types";
 import { usePortalData } from "@/lib/portalStore";
@@ -88,9 +88,12 @@ export default function ItineraryDetailPage() {
         >
           ← Back to Itineraries
         </Link>
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/trips/${trip.id}`}>Open Trip</Link>
-        </Button>
+        <Link
+          href={`/trips/${trip.id}`}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          Open Trip
+        </Link>
       </div>
 
       <div className="space-y-2">
