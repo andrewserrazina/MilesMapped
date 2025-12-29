@@ -13,3 +13,40 @@ body {
 * {
   @apply border-slate-200;
 }
+
+@media print {
+  @page {
+    margin: 24mm;
+  }
+
+  body {
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: #0f172a;
+  }
+
+  .print-hidden {
+    display: none !important;
+  }
+
+  .print-itinerary {
+    max-width: none;
+  }
+
+  .print-single-column {
+    grid-template-columns: 1fr !important;
+  }
+
+  .print-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
