@@ -21,6 +21,28 @@ export default function AwardOptionCard({
   onEdit: () => void;
   onRemove: () => void;
 }) {
+  const centsPerPoint =
+    option.cashEquivalentUSD === undefined || option.milesRequired <= 0
+      ? null
+      : ((option.cashEquivalentUSD - option.feesUSD) / option.milesRequired) * 100;
+
+  const cppBadge =
+    centsPerPoint === null
+      ? null
+      : centsPerPoint >= 2
+        ? "Excellent"
+        : centsPerPoint >= 1.5
+          ? "Good"
+          : centsPerPoint >= 1
+            ? "Fair"
+            : "Low";
+
+  const systemBadges = [
+    cppBadge,
+    option.transferTime === "Instant" ? "Fast Transfer" : null,
+    option.feesUSD >= 400 ? "High Fees" : null,
+  ].filter((badge): badge is string => Boolean(badge));
+
   return (
     <Card
       className={cn(
@@ -37,6 +59,11 @@ export default function AwardOptionCard({
             {isPinned ? <Badge variant="default">Pinned</Badge> : null}
             {option.badges?.map((badge) => (
               <Badge key={badge} variant="secondary">
+                {badge}
+              </Badge>
+            ))}
+            {systemBadges.map((badge) => (
+              <Badge key={badge} variant="outline">
                 {badge}
               </Badge>
             ))}
@@ -65,7 +92,7 @@ export default function AwardOptionCard({
           </Button>
         </div>
       </div>
-      <div className="mt-4 grid gap-4 md:grid-cols-4">
+      <div className="mt-4 grid gap-4 md:grid-cols-5">
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-400">Miles</p>
           <p className="text-sm font-semibold text-slate-900">
@@ -76,6 +103,14 @@ export default function AwardOptionCard({
           <p className="text-xs uppercase tracking-wide text-slate-400">Fees</p>
           <p className="text-sm font-semibold text-slate-900">
             ${option.feesUSD}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-slate-400">
+            Value
+          </p>
+          <p className="text-sm font-semibold text-slate-900">
+            {centsPerPoint === null ? "—" : `${centsPerPoint.toFixed(2)} cpp`}
           </p>
         </div>
         <div>

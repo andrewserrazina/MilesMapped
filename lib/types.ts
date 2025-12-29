@@ -44,6 +44,7 @@ export interface AwardOption {
   route: string;
   milesRequired: number;
   feesUSD: number;
+  cashEquivalentUSD?: number;
   transferRequired: boolean;
   transferTime: "Instant" | "1–2 days" | "Unknown";
   badges?: string[];

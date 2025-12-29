@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AwardOptionCard from "@/components/trips/AwardOptionCard";
 import AwardOptionModal, {
@@ -25,6 +25,9 @@ export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const [awardSort, setAwardSort] = useState<
+    "pinned" | "miles" | "fees" | "cpp"
+  >("pinned");
   const [awardModalState, setAwardModalState] = useState<{
     open: boolean;
     mode: "add" | "edit";
@@ -43,6 +46,14 @@ export default function TripDetailPage() {
   const pinnedOption = trip?.awardOptions.find(
     (option) => option.id === trip.pinnedAwardOptionId
   );
+  const hasCashEquivalent = Boolean(
+    trip?.awardOptions.some((option) => option.cashEquivalentUSD !== undefined)
+  );
+  useEffect(() => {
+    if (!hasCashEquivalent && awardSort === "cpp") {
+      setAwardSort("pinned");
+    }
+  }, [awardSort, hasCashEquivalent]);
   const orderedAwardOptions = useMemo(() => {
     if (!trip) {
       return [];
@@ -51,11 +62,41 @@ export default function TripDetailPage() {
     const unpinned = trip.awardOptions.filter(
       (option) => option.id !== trip.pinnedAwardOptionId
     );
-    const sortedUnpinned = [...unpinned].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const sortedUnpinned = [...unpinned].sort((a, b) => {
+      if (awardSort === "miles") {
+        return a.milesRequired - b.milesRequired;
+      }
+      if (awardSort === "fees") {
+        return a.feesUSD - b.feesUSD;
+      }
+      if (awardSort === "cpp") {
+        const cppA =
+          a.cashEquivalentUSD === undefined
+            ? null
+            : a.milesRequired > 0
+              ? ((a.cashEquivalentUSD - a.feesUSD) / a.milesRequired) * 100
+              : null;
+        const cppB =
+          b.cashEquivalentUSD === undefined
+            ? null
+            : b.milesRequired > 0
+              ? ((b.cashEquivalentUSD - b.feesUSD) / b.milesRequired) * 100
+              : null;
+        if (cppA === null && cppB === null) {
+          return 0;
+        }
+        if (cppA === null) {
+          return 1;
+        }
+        if (cppB === null) {
+          return -1;
+        }
+        return cppB - cppA;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
     return pinnedOption ? [pinnedOption, ...sortedUnpinned] : sortedUnpinned;
-  }, [trip, pinnedOption]);
+  }, [trip, pinnedOption, awardSort]);
 
   const hasPinnedOption = Boolean(pinnedOption);
   const isClosed = trip ? portalRepo.isTripReadOnly(trip) : false;
@@ -121,6 +162,7 @@ export default function TripDetailPage() {
         route: values.route,
         milesRequired: values.milesRequired,
         feesUSD: values.feesUSD,
+        cashEquivalentUSD: values.cashEquivalentUSD,
         transferRequired: values.transferRequired,
         transferTime: values.transferTime,
         badges: values.badges,
@@ -133,6 +175,7 @@ export default function TripDetailPage() {
         route: values.route,
         milesRequired: values.milesRequired,
         feesUSD: values.feesUSD,
+        cashEquivalentUSD: values.cashEquivalentUSD,
         transferRequired: values.transferRequired,
         transferTime: values.transferTime,
         badges: values.badges,
@@ -372,19 +415,42 @@ export default function TripDetailPage() {
 
         <TabsContent value="awards">
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-lg font-semibold text-slate-900">
                 Award Options
               </h3>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setAwardModalState({ open: true, mode: "add", option: null })
-                }
-                disabled={isClosed}
-              >
-                + Add Award Option
-              </Button>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Sort By
+                  </span>
+                  <select
+                    className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                    value={awardSort}
+                    onChange={(event) =>
+                      setAwardSort(
+                        event.target.value as "pinned" | "miles" | "fees" | "cpp"
+                      )
+                    }
+                  >
+                    <option value="pinned">Pinned first</option>
+                    <option value="miles">Lowest miles</option>
+                    <option value="fees">Lowest fees</option>
+                    {hasCashEquivalent ? (
+                      <option value="cpp">Highest cpp</option>
+                    ) : null}
+                  </select>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setAwardModalState({ open: true, mode: "add", option: null })
+                  }
+                  disabled={isClosed}
+                >
+                  + Add Award Option
+                </Button>
+              </div>
             </div>
 
             {orderedAwardOptions.length ? (
