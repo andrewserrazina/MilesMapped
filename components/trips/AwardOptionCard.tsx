@@ -1,3 +1,5 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,14 +9,16 @@ import type { AwardOption } from "@/lib/types";
 export default function AwardOptionCard({
   option,
   isPinned,
+  isReadOnly,
   onPin,
   onEdit,
   onRemove,
 }: {
   option: AwardOption;
   isPinned: boolean;
+  isReadOnly: boolean;
   onPin: () => void;
-  onEdit?: () => void;
+  onEdit: () => void;
   onRemove: () => void;
 }) {
   return (
@@ -40,15 +44,23 @@ export default function AwardOptionCard({
           <p className="text-sm text-slate-500">{option.route}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onPin}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onPin}
+            disabled={isReadOnly || isPinned}
+          >
             {isPinned ? "Pinned" : "Pin Best Option"}
           </Button>
-          {onEdit ? (
-            <Button variant="ghost" size="sm" onClick={onEdit}>
-              Edit
-            </Button>
-          ) : null}
-          <Button variant="ghost" size="sm" onClick={onRemove}>
+          <Button variant="ghost" size="sm" onClick={onEdit} disabled={isReadOnly}>
+            Edit
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            disabled={isReadOnly}
+          >
             Remove
           </Button>
         </div>
@@ -67,9 +79,7 @@ export default function AwardOptionCard({
           </p>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-400">
-            Transfer
-          </p>
+          <p className="text-xs uppercase tracking-wide text-slate-400">Transfer</p>
           <p className="text-sm font-semibold text-slate-900">
             {option.transferRequired ? "Required" : "Not required"}
           </p>
