@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/page-header";
 import EmptyState from "@/components/empty-state";
@@ -15,17 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
+import { usePortalData } from "@/lib/portalStore";
 
 export default function ItinerariesPage() {
-  const [portalData, setPortalData] = useState<PortalData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const data = initializeFromMockIfEmpty();
-    setPortalData(data);
-    setIsLoading(false);
-  }, []);
+  const { data: portalData, isHydrated } = usePortalData();
 
   const itineraries = useMemo(() => {
     if (!portalData) {
@@ -36,7 +29,7 @@ export default function ItinerariesPage() {
     );
   }, [portalData]);
 
-  if (isLoading) {
+  if (!isHydrated) {
     return (
       <div className="space-y-6">
         <PageHeader

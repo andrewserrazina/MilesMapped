@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AwardOptionCard from "@/components/trips/AwardOptionCard";
 import AwardOptionModal, {
@@ -16,54 +16,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { tripStatusOrder } from "@/lib/mock/data";
 import {
-  initializeFromMockIfEmpty,
-  savePortalData,
-  type PortalData,
-} from "@/lib/storage";
-import type { AwardOption, Client, Itinerary, Trip, TripStatus } from "@/lib/types";
+  addAwardOption,
+  addItinerary,
+  isTripReadOnly,
+  removeAwardOption,
+  setPinnedAwardOption,
+  updateAwardOption,
+  updateTrip,
+  usePortalData,
+} from "@/lib/portalStore";
+import type { AwardOption, Itinerary, TripStatus } from "@/lib/types";
 
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const [portalData, setPortalData] = useState<PortalData | null>(null);
-  const [trip, setTrip] = useState<Trip | null>(null);
-  const [client, setClient] = useState<Client | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: portalData, isHydrated } = usePortalData();
   const [awardModalState, setAwardModalState] = useState<{
     open: boolean;
     mode: "add" | "edit";
     option: AwardOption | null;
   }>({ open: false, mode: "add", option: null });
 
-  useEffect(() => {
-    const data = initializeFromMockIfEmpty();
-    const foundTrip = data.trips.find((item) => item.id === params.id) ?? null;
-    const foundClient = foundTrip
-      ? data.clients.find((item) => item.id === foundTrip.clientId) ?? null
-      : null;
-
-    setPortalData(data);
-    setTrip(foundTrip);
-    setClient(foundClient);
-    setIsLoading(false);
-  }, [params.id]);
-
-  const persistTrip = (updatedTrip: Trip) => {
-    setTrip(updatedTrip);
-    setPortalData((prev) => {
-      if (!prev) {
-        return prev;
-      }
-      const updatedData = {
-        ...prev,
-        trips: prev.trips.map((item) =>
-          item.id === updatedTrip.id ? updatedTrip : item
-        ),
-      };
-      savePortalData(updatedData);
-      return updatedData;
-    });
-  };
+  const trip = useMemo(
+    () => portalData.trips.find((item) => item.id === params.id) ?? null,
+    [params.id, portalData.trips]
+  );
+  const client = useMemo(
+    () =>
+      portalData.clients.find((item) => item.id === trip?.clientId) ?? null,
+    [portalData.clients, trip?.clientId]
+  );
 
   const pinnedOption = trip?.awardOptions.find(
     (option) => option.id === trip.pinnedAwardOptionId
@@ -83,7 +65,7 @@ export default function TripDetailPage() {
   }, [trip, pinnedOption]);
 
   const hasPinnedOption = Boolean(pinnedOption);
-  const isClosed = trip?.status === "Closed";
+  const isClosed = trip ? isTripReadOnly(trip) : false;
   const canGenerate = trip?.status === "Draft Ready" && hasPinnedOption;
 
   const generateHelperText =
@@ -93,7 +75,7 @@ export default function TripDetailPage() {
         ? "Pin an award option to generate."
         : undefined;
 
-  if (isLoading) {
+  if (!isHydrated) {
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-slate-200 bg-white p-6">
@@ -133,27 +115,16 @@ export default function TripDetailPage() {
         badges: values.badges,
         createdAt: new Date().toISOString(),
       };
-      persistTrip({
-        ...trip,
-        awardOptions: [created, ...trip.awardOptions],
-      });
+      addAwardOption(trip.id, created);
     } else if (awardModalState.option) {
-      persistTrip({
-        ...trip,
-        awardOptions: trip.awardOptions.map((item) =>
-          item.id === awardModalState.option?.id
-            ? {
-                ...item,
-                program: values.program,
-                route: values.route,
-                milesRequired: values.milesRequired,
-                feesUSD: values.feesUSD,
-                transferRequired: values.transferRequired,
-                transferTime: values.transferTime,
-                badges: values.badges,
-              }
-            : item
-        ),
+      updateAwardOption(trip.id, awardModalState.option.id, {
+        program: values.program,
+        route: values.route,
+        milesRequired: values.milesRequired,
+        feesUSD: values.feesUSD,
+        transferRequired: values.transferRequired,
+        transferTime: values.transferTime,
+        badges: values.badges,
       });
     }
     setAwardModalState({ open: false, mode: "add", option: null });
@@ -161,22 +132,12 @@ export default function TripDetailPage() {
 
   const handleRemoveAwardOption = (option: AwardOption) => {
     if (window.confirm("Remove this award option?")) {
-      const updatedOptions = trip.awardOptions.filter(
-        (item) => item.id !== option.id
-      );
-      persistTrip({
-        ...trip,
-        awardOptions: updatedOptions,
-        pinnedAwardOptionId:
-          trip.pinnedAwardOptionId === option.id
-            ? undefined
-            : trip.pinnedAwardOptionId,
-      });
+      removeAwardOption(trip.id, option.id);
     }
   };
 
   const handleGenerateItinerary = () => {
-    if (!portalData || !trip || !pinnedOption) {
+    if (!trip || !pinnedOption) {
       return;
     }
 
@@ -192,13 +153,7 @@ export default function TripDetailPage() {
       backupOptionIds: backupOptions.map((option) => option.id),
     };
 
-    const updatedData: PortalData = {
-      ...portalData,
-      itineraries: [newItinerary, ...portalData.itineraries],
-    };
-
-    savePortalData(updatedData);
-    setPortalData(updatedData);
+    addItinerary(newItinerary);
     router.push(`/itineraries/${newItinerary.id}`);
   };
 
@@ -209,7 +164,7 @@ export default function TripDetailPage() {
         status={trip.status}
         statusOptions={tripStatusOrder}
         onStatusChange={(nextStatus: TripStatus) =>
-          persistTrip({ ...trip, status: nextStatus })
+          updateTrip(trip.id, (current) => ({ ...current, status: nextStatus }))
         }
         onGenerateItinerary={handleGenerateItinerary}
         generateDisabled={!canGenerate || isClosed}
@@ -363,12 +318,7 @@ export default function TripDetailPage() {
                       option={option}
                       isPinned={isPinned}
                       isReadOnly={isClosed}
-                      onPin={() =>
-                        persistTrip({
-                          ...trip,
-                          pinnedAwardOptionId: option.id,
-                        })
-                      }
+                      onPin={() => setPinnedAwardOption(trip.id, option.id)}
                       onEdit={() =>
                         setAwardModalState({
                           open: true,
@@ -419,7 +369,9 @@ export default function TripDetailPage() {
         <TabsContent value="notes">
           <InternalNotesEditor
             value={trip.notes ?? ""}
-            onChange={(value) => persistTrip({ ...trip, notes: value })}
+            onChange={(value) =>
+              updateTrip(trip.id, (current) => ({ ...current, notes: value }))
+            }
             placeholder="Add internal workflow notes here."
             readOnly={isClosed}
           />
