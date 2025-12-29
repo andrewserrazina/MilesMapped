@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import DataTable from "@/components/data-table";
 import { Input } from "@/components/ui/input";
-import { clients, trips } from "@/lib/mock/data";
+import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
 import type { Client } from "@/lib/types";
 
 const statusOptions: Array<Client["status"] | "All"> = [
@@ -19,8 +19,17 @@ export default function ClientsPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<(typeof statusOptions)[number]>("All");
+  const [portalData, setPortalData] = useState<PortalData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const data = initializeFromMockIfEmpty();
+    setPortalData(data);
+    setIsLoading(false);
+  }, []);
 
   const filteredClients = useMemo(() => {
+    const clients = portalData?.clients ?? [];
     return clients.filter((client) => {
       const matchesQuery = client.fullName
         .toLowerCase()
@@ -28,7 +37,23 @@ export default function ClientsPage() {
       const matchesStatus = statusFilter === "All" || client.status === statusFilter;
       return matchesQuery && matchesStatus;
     });
-  }, [query, statusFilter]);
+  }, [portalData, query, statusFilter]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Clients"
+          description="Manage client profiles, preferences, and trip history."
+        />
+        <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
+          <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+          <div className="h-10 w-full animate-pulse rounded bg-slate-100" />
+          <div className="h-40 w-full animate-pulse rounded bg-slate-100" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -84,7 +109,8 @@ export default function ClientsPage() {
             header: "Trips",
             render: (client: Client) => (
               <span className="text-sm text-slate-600">
-                {trips.filter((trip) => trip.clientId === client.id).length}
+                {portalData?.trips.filter((trip) => trip.clientId === client.id).length ??
+                  0}
               </span>
             ),
           },

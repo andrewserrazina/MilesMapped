@@ -1,22 +1,76 @@
+"use client";
+
 import Link from "next/link";
-import { activities, clients, trips } from "@/lib/mock/data";
+import { useEffect, useMemo, useState } from "react";
+import { activities } from "@/lib/mock/data";
 import PageHeader from "@/components/page-header";
 import KPIStatCard from "@/components/kpi-stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-
-const kpis = [
-  { label: "Active Clients", value: clients.filter((c) => c.status === "Active").length.toString() },
-  { label: "Trips In Progress", value: trips.filter((t) => t.status === "Searching" || t.status === "Draft Ready").length.toString() },
-  { label: "Trips Delivered", value: trips.filter((t) => t.status === "Sent" || t.status === "Booked").length.toString() },
-  { label: "Avg Points Saved", value: "48k" },
-  { label: "Revenue MTD", value: "$18.4k" },
-  { label: "Pending Followups", value: "6" },
-];
+import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
 
 export default function DashboardPage() {
+  const [portalData, setPortalData] = useState<PortalData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const data = initializeFromMockIfEmpty();
+    setPortalData(data);
+    setIsLoading(false);
+  }, []);
+
+  const kpis = useMemo(() => {
+    const clients = portalData?.clients ?? [];
+    const trips = portalData?.trips ?? [];
+
+    return [
+      {
+        label: "Active Clients",
+        value: clients.filter((client) => client.status === "Active").length.toString(),
+      },
+      {
+        label: "Trips In Progress",
+        value: trips
+          .filter((trip) => trip.status === "Searching" || trip.status === "Draft Ready")
+          .length.toString(),
+      },
+      {
+        label: "Trips Delivered",
+        value: trips
+          .filter((trip) => trip.status === "Sent" || trip.status === "Booked")
+          .length.toString(),
+      },
+      { label: "Avg Points Saved", value: "48k" },
+      { label: "Revenue MTD", value: "$18.4k" },
+      { label: "Pending Followups", value: "6" },
+    ];
+  }, [portalData]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <PageHeader
+          title="Dashboard"
+          description="Daily performance snapshot and workflow queue."
+        />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={`kpi-skeleton-${index}`}
+              className="h-24 animate-pulse rounded-xl border border-slate-200 bg-white"
+            />
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="h-64 animate-pulse rounded-xl border border-slate-200 bg-white" />
+          <div className="h-64 animate-pulse rounded-xl border border-slate-200 bg-white" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader

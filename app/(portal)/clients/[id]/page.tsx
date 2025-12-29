@@ -1,25 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import Tabs from "@/components/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getClientById, getTripsByClientId } from "@/lib/mock/data";
-import type { Client } from "@/lib/types";
+import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
+import type { Client, Trip } from "@/lib/types";
 
 export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
-  const client = useMemo(() => getClientById(params.id), [params.id]);
-  const trips = useMemo(
-    () => (client ? getTripsByClientId(client.id) : []),
-    [client]
-  );
+  const [portalData, setPortalData] = useState<PortalData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [notes, setNotes] = useState(
     "Meeting notes and client-specific follow-ups live here."
   );
+
+  useEffect(() => {
+    const data = initializeFromMockIfEmpty();
+    setPortalData(data);
+    setIsLoading(false);
+  }, []);
+
+  const client = useMemo(
+    () => portalData?.clients.find((item) => item.id === params.id) ?? null,
+    [params.id, portalData]
+  );
+  const trips = useMemo<Trip[]>(
+    () =>
+      portalData?.trips.filter((trip) => trip.clientId === client?.id) ?? [],
+    [client, portalData]
+  );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-6">
+          <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
+          <div className="mt-4 h-8 w-1/2 animate-pulse rounded bg-slate-100" />
+          <div className="mt-6 h-32 w-full animate-pulse rounded bg-slate-100" />
+        </div>
+      </div>
+    );
+  }
 
   if (!client) {
     return (
