@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { clients, itineraries, trips } from "@/lib/mock/data";
+import { resetPortalStorage } from "@/lib/storage";
 import type { AwardOption, Client, Itinerary, Trip } from "@/lib/types";
 
 const STORAGE_KEY = "milesmapped.portalData";
@@ -104,6 +105,150 @@ function normalizePortalData(data: PortalData): PortalData {
   };
 }
 
+function createId(prefix: string) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}_${crypto.randomUUID()}`;
+  }
+
+  return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+}
+
+function buildSampleTrips(availableClients: Client[]): Trip[] {
+  const [primaryClient, secondaryClient, tertiaryClient] = availableClients;
+  const fallbackClientId = clients[0]?.id ?? "client_001";
+
+  const tripOneId = createId("trip");
+  const tripOneOptionOneId = createId("award");
+  const tripOneOptionTwoId = createId("award");
+  const tripTwoId = createId("trip");
+  const tripTwoOptionOneId = createId("award");
+  const tripTwoOptionTwoId = createId("award");
+  const tripThreeId = createId("trip");
+  const tripThreeOptionOneId = createId("award");
+
+  return [
+    {
+      id: tripOneId,
+      clientId: primaryClient?.id ?? fallbackClientId,
+      title: "Tokyo Cherry Blossom Sprint",
+      origin: "LAX",
+      destination: "HND",
+      dateStart: "2025-03-22",
+      dateEnd: "2025-03-30",
+      flexibilityDays: 2,
+      passengers: 2,
+      cabinPref: "Business",
+      cashBudget: 3200,
+      status: "Searching",
+      assignedAgentName: "Admin",
+      notes: "Target ANA/JAL sweet spots and low-fuel-surcharge options.",
+      awardOptions: [
+        {
+          id: tripOneOptionOneId,
+          tripId: tripOneId,
+          program: "Virgin Atlantic",
+          route: "LAX–HND",
+          milesRequired: 60000,
+          feesUSD: 155,
+          transferRequired: true,
+          transferTime: "Instant",
+          badges: ["Sweet Spot"],
+          createdAt: "2025-01-15",
+        },
+        {
+          id: tripOneOptionTwoId,
+          tripId: tripOneId,
+          program: "American AAdvantage",
+          route: "LAX–HND",
+          milesRequired: 80000,
+          feesUSD: 53,
+          transferRequired: false,
+          transferTime: "Instant",
+          badges: ["Low Fees"],
+          createdAt: "2025-01-16",
+        },
+      ],
+      hotelOptions: [],
+      pinnedAwardOptionId: tripOneOptionOneId,
+    },
+    {
+      id: tripTwoId,
+      clientId: secondaryClient?.id ?? fallbackClientId,
+      title: "Rome & Amalfi Anniversary",
+      origin: "ORD",
+      destination: "FCO",
+      dateStart: "2025-05-07",
+      dateEnd: "2025-05-16",
+      flexibilityDays: 3,
+      passengers: 2,
+      cabinPref: "Premium",
+      cashBudget: 2600,
+      status: "Draft Ready",
+      assignedAgentName: "Jordan Lee",
+      notes: "Prioritize overnight outbound and coastal hotel points options.",
+      awardOptions: [
+        {
+          id: tripTwoOptionOneId,
+          tripId: tripTwoId,
+          program: "Air France",
+          route: "ORD–FCO",
+          milesRequired: 45000,
+          feesUSD: 210,
+          transferRequired: true,
+          transferTime: "1–2 days",
+          badges: ["Low Fees"],
+          createdAt: "2025-02-03",
+        },
+        {
+          id: tripTwoOptionTwoId,
+          tripId: tripTwoId,
+          program: "United",
+          route: "ORD–FCO",
+          milesRequired: 60000,
+          feesUSD: 6,
+          transferRequired: false,
+          transferTime: "Instant",
+          badges: ["Nonstop"],
+          createdAt: "2025-02-04",
+        },
+      ],
+      hotelOptions: [],
+    },
+    {
+      id: tripThreeId,
+      clientId: tertiaryClient?.id ?? fallbackClientId,
+      title: "Singapore + Bali Workcation",
+      origin: "SEA",
+      destination: "SIN",
+      dateStart: "2025-06-11",
+      dateEnd: "2025-06-24",
+      flexibilityDays: 1,
+      passengers: 1,
+      cabinPref: "Business",
+      cashBudget: 3100,
+      status: "Intake",
+      assignedAgentName: "Agent A",
+      notes: "Needs strong Wi-Fi and flexible return routing via DPS.",
+      awardOptions: [
+        {
+          id: tripThreeOptionOneId,
+          tripId: tripThreeId,
+          program: "Singapore KrisFlyer",
+          route: "SEA–SIN",
+          milesRequired: 111500,
+          feesUSD: 64,
+          transferRequired: true,
+          transferTime: "Instant",
+          badges: ["Premium Cabin"],
+          createdAt: "2025-02-18",
+        },
+      ],
+      hotelOptions: [],
+      pinnedAwardOptionId: tripThreeOptionOneId,
+    },
+  ];
+}
+
 function hydrateStore() {
   if (typeof window === "undefined" || isHydratedState) {
     return;
@@ -149,6 +294,30 @@ export function usePortalData() {
     setData: setPortalData,
     isHydrated: snapshot.isHydrated,
   };
+}
+
+export function resetPortalData() {
+  if (!isHydratedState) {
+    hydrateStore();
+  }
+
+  resetPortalStorage();
+  portalDataState = normalizePortalData(defaultPortalData);
+  persist(portalDataState);
+  isHydratedState = true;
+  snapshotState = { data: portalDataState, isHydrated: isHydratedState };
+  notifyListeners();
+}
+
+export function seedSampleTrips() {
+  if (!isHydratedState) {
+    hydrateStore();
+  }
+
+  setPortalData((previous) => ({
+    ...previous,
+    trips: [...buildSampleTrips(previous.clients), ...previous.trips],
+  }));
 }
 
 export function isTripReadOnly(trip: Trip) {

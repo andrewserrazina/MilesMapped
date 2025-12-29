@@ -18,6 +18,30 @@ const defaultPortalData: PortalData = {
   itineraries,
 };
 
+function ensureSchemaVersion(data: PortalData): PortalData {
+  if (typeof data.schemaVersion === "number") {
+    return data;
+  }
+
+  return {
+    ...data,
+    schemaVersion: SCHEMA_VERSION,
+  };
+}
+
+function isPortalDataShape(value: unknown): value is PortalData {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "clients" in value &&
+    "trips" in value &&
+    "itineraries" in value &&
+    Array.isArray((value as PortalData).clients) &&
+    Array.isArray((value as PortalData).trips) &&
+    Array.isArray((value as PortalData).itineraries)
+  );
+}
+
 function readFromStorage(): PortalData | null {
   if (typeof window === "undefined") {
     return null;
@@ -29,7 +53,11 @@ function readFromStorage(): PortalData | null {
   }
 
   try {
-    return JSON.parse(raw) as PortalData;
+    const parsed = JSON.parse(raw) as PortalData;
+    if (!isPortalDataShape(parsed)) {
+      return null;
+    }
+    return ensureSchemaVersion(parsed);
   } catch (error) {
     console.error("Failed to parse portal data", error);
     return null;
@@ -40,7 +68,10 @@ export function savePortalData(data: PortalData) {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  window.localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(ensureSchemaVersion(data))
+  );
 }
 
 export function initializeFromMockIfEmpty(): PortalData {
@@ -50,6 +81,7 @@ export function initializeFromMockIfEmpty(): PortalData {
 
   const existing = readFromStorage();
   if (existing) {
+    savePortalData(existing);
     return existing;
   }
 
@@ -64,8 +96,21 @@ export function getPortalData(): PortalData {
 
   const existing = readFromStorage();
   if (existing) {
+    if (existing.schemaVersion !== SCHEMA_VERSION) {
+      const normalized = { ...existing, schemaVersion: SCHEMA_VERSION };
+      savePortalData(normalized);
+      return normalized;
+    }
     return existing;
   }
 
   return initializeFromMockIfEmpty();
+}
+
+export function resetPortalStorage() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(STORAGE_KEY);
 }
