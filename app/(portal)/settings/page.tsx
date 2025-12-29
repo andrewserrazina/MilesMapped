@@ -15,12 +15,19 @@ import { Input } from "@/components/ui/input";
 import { portalRepo } from "@/lib/portalRepo";
 import type { AwardSearchIntegrationConfig } from "@/lib/types";
 import { resetPortalData, seedSampleTrips } from "@/lib/portalStore";
+import { useCurrentUser } from "@/lib/auth/mockAuth";
+import { can } from "@/lib/auth/permissions";
 
 export default function SettingsPage() {
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
   const integrations = portalRepo.getAwardSearchIntegrations(portalData);
+  const currentUser = useCurrentUser();
+  const canResetDemo = can(currentUser, "demo.reset");
 
   const handleReset = () => {
+    if (!canResetDemo) {
+      return;
+    }
     const confirmed = window.confirm(
       "Reset demo data? This will overwrite any portal changes and restore the mock dataset."
     );
@@ -32,6 +39,9 @@ export default function SettingsPage() {
   };
 
   const handleSeedTrips = () => {
+    if (!canResetDemo) {
+      return;
+    }
     seedSampleTrips();
   };
 
@@ -172,12 +182,21 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={handleReset} disabled={!isHydrated}>
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            disabled={!isHydrated || !canResetDemo}
+          >
             Reset Demo Data
           </Button>
-          <Button onClick={handleSeedTrips} disabled={!isHydrated}>
+          <Button onClick={handleSeedTrips} disabled={!isHydrated || !canResetDemo}>
             Seed Sample Trips
           </Button>
+          {!canResetDemo ? (
+            <p className="text-xs text-slate-400">
+              Only admins can reset demo data.
+            </p>
+          ) : null}
         </CardContent>
       </Card>
     </div>

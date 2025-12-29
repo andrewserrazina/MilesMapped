@@ -10,11 +10,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { portalRepo } from "@/lib/portalRepo";
-
-const currentUserName = "Admin";
+import { useCurrentUser } from "@/lib/auth/mockAuth";
+import { can } from "@/lib/auth/permissions";
 
 export default function DashboardPage() {
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const currentUser = useCurrentUser();
+  const canCreateClient = can(currentUser, "client.create");
+  const canCreateTrip = can(currentUser, "trip.create");
   const clients = portalRepo.listClients(portalData);
   const trips = portalRepo.listTrips(portalData);
 
@@ -28,7 +31,7 @@ export default function DashboardPage() {
         label: "Trips In Progress",
         value: trips
           .filter((trip) => trip.status === "Searching" || trip.status === "Draft Ready")
-          .filter((trip) => trip.assignedAgentName === currentUserName)
+          .filter((trip) => trip.assignedAgentName === currentUser.name)
           .length.toString(),
         helper: "Assigned to you",
       },
@@ -42,7 +45,7 @@ export default function DashboardPage() {
       { label: "Revenue MTD", value: "$18.4k" },
       { label: "Pending Followups", value: "6" },
     ];
-  }, [clients, trips]);
+  }, [clients, currentUser.name, trips]);
 
   if (!isHydrated) {
     return (
@@ -73,22 +76,49 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Daily performance snapshot and workflow queue."
         actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/clients/new"
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
-              + New Client
-            </Link>
-            <Link
-              href="/trips/new"
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
-              + New Trip
-            </Link>
-            <Link href="/award-search" className={cn(buttonVariants({}))}>
-              Award Search
-            </Link>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              {canCreateClient ? (
+                <Link
+                  href="/clients/new"
+                  className={cn(buttonVariants({ variant: "outline" }))}
+                >
+                  + New Client
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(buttonVariants({ variant: "outline" }))}
+                  disabled
+                >
+                  + New Client
+                </button>
+              )}
+              {canCreateTrip ? (
+                <Link
+                  href="/trips/new"
+                  className={cn(buttonVariants({ variant: "outline" }))}
+                >
+                  + New Trip
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(buttonVariants({ variant: "outline" }))}
+                  disabled
+                >
+                  + New Trip
+                </button>
+              )}
+              <Link href="/award-search" className={cn(buttonVariants({}))}>
+                Award Search
+              </Link>
+            </div>
+            {!canCreateClient || !canCreateTrip ? (
+              <span className="text-xs text-slate-400">
+                Only admins can create clients and trips.
+              </span>
+            ) : null}
           </div>
         }
       />
@@ -125,23 +155,53 @@ export default function DashboardPage() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link
-              href="/clients/new"
-              className={cn(buttonVariants(), "w-full justify-between")}
-            >
-              + New Client
-              <span aria-hidden>→</span>
-            </Link>
-            <Link
-              href="/trips/new"
-              className={cn(
-                buttonVariants({ variant: "secondary" }),
-                "w-full justify-between"
-              )}
-            >
-              + New Trip
-              <span aria-hidden>→</span>
-            </Link>
+            {canCreateClient ? (
+              <Link
+                href="/clients/new"
+                className={cn(buttonVariants(), "w-full justify-between")}
+              >
+                + New Client
+                <span aria-hidden>→</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className={cn(buttonVariants(), "w-full justify-between")}
+                disabled
+              >
+                + New Client
+                <span aria-hidden>→</span>
+              </button>
+            )}
+            {canCreateTrip ? (
+              <Link
+                href="/trips/new"
+                className={cn(
+                  buttonVariants({ variant: "secondary" }),
+                  "w-full justify-between"
+                )}
+              >
+                + New Trip
+                <span aria-hidden>→</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className={cn(
+                  buttonVariants({ variant: "secondary" }),
+                  "w-full justify-between"
+                )}
+                disabled
+              >
+                + New Trip
+                <span aria-hidden>→</span>
+              </button>
+            )}
+            {!canCreateClient || !canCreateTrip ? (
+              <p className="text-xs text-slate-400">
+                Only admins can create clients and trips.
+              </p>
+            ) : null}
             <Link
               href="/award-search"
               className={cn(

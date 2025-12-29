@@ -13,10 +13,11 @@ import { tripStatusOrder } from "@/lib/mock/data";
 import type { Trip } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { portalRepo } from "@/lib/portalRepo";
+import { useCurrentUser } from "@/lib/auth/mockAuth";
+import { can } from "@/lib/auth/permissions";
 
 const statusOptions = ["All", ...tripStatusOrder] as const;
 const assignmentFilters = ["All Trips", "My Trips"] as const;
-const currentUserName = "Admin";
 
 export default function TripsPage() {
   const router = useRouter();
@@ -28,6 +29,8 @@ export default function TripsPage() {
     (typeof assignmentFilters)[number]
   >("All Trips");
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const currentUser = useCurrentUser();
+  const canCreateTrip = can(currentUser, "trip.create");
   const trips = portalRepo.listTrips(portalData);
   const clients = portalRepo.listClients(portalData);
 
@@ -40,10 +43,10 @@ export default function TripsPage() {
       const matchesStatus = statusFilter === "All" || trip.status === statusFilter;
       const matchesAssignment =
         assignmentFilter === "All Trips" ||
-        trip.assignedAgentName === currentUserName;
+        trip.assignedAgentName === currentUser.name;
       return matchesQuery && matchesStatus && matchesAssignment;
     });
-  }, [assignmentFilter, clients, query, statusFilter, trips]);
+  }, [assignmentFilter, clients, currentUser.name, query, statusFilter, trips]);
 
   const hasFilters =
     query.length > 0 ||
@@ -72,12 +75,29 @@ export default function TripsPage() {
         title="Trips"
         description="Track active workflows and status-driven milestones."
         actions={
-          <Link
-            href="/trips/new"
-            className={cn(buttonVariants(), "whitespace-nowrap")}
-          >
-            + New Trip
-          </Link>
+          <div className="flex flex-col items-end gap-2">
+            {canCreateTrip ? (
+              <Link
+                href="/trips/new"
+                className={cn(buttonVariants(), "whitespace-nowrap")}
+              >
+                + New Trip
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className={cn(buttonVariants(), "whitespace-nowrap")}
+                disabled
+              >
+                + New Trip
+              </button>
+            )}
+            {!canCreateTrip ? (
+              <span className="text-xs text-slate-400">
+                Only admins can create trips.
+              </span>
+            ) : null}
+          </div>
         }
       />
 

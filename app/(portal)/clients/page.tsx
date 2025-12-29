@@ -11,6 +11,8 @@ import { buttonVariants } from "@/components/ui/button";
 import type { Client } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { portalRepo } from "@/lib/portalRepo";
+import { useCurrentUser } from "@/lib/auth/mockAuth";
+import { can } from "@/lib/auth/permissions";
 
 const statusOptions: Array<Client["status"] | "All"> = [
   "All",
@@ -24,6 +26,8 @@ export default function ClientsPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<(typeof statusOptions)[number]>("All");
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const currentUser = useCurrentUser();
+  const canCreateClient = can(currentUser, "client.create");
   const clients = portalRepo.listClients(portalData);
   const trips = portalRepo.listTrips(portalData);
 
@@ -61,12 +65,29 @@ export default function ClientsPage() {
         title="Clients"
         description="Manage client profiles, preferences, and trip history."
         actions={
-          <Link
-            href="/clients/new"
-            className={cn(buttonVariants(), "whitespace-nowrap")}
-          >
-            + New Client
-          </Link>
+          <div className="flex flex-col items-end gap-2">
+            {canCreateClient ? (
+              <Link
+                href="/clients/new"
+                className={cn(buttonVariants(), "whitespace-nowrap")}
+              >
+                + New Client
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className={cn(buttonVariants(), "whitespace-nowrap")}
+                disabled
+              >
+                + New Client
+              </button>
+            )}
+            {!canCreateClient ? (
+              <span className="text-xs text-slate-400">
+                Only admins can create clients.
+              </span>
+            ) : null}
+          </div>
         }
       />
 
