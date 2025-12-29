@@ -1,4 +1,12 @@
-import type { ActivityItem, AwardOption, Client, HotelOption, Itinerary, Trip } from "@/lib/types";
+import type {
+  ActivityItem,
+  AwardOption,
+  Client,
+  HotelOption,
+  Itinerary,
+  Trip,
+} from "@/lib/types";
+import { defaultTripIntake } from "@/lib/types";
 
 export const clients: Client[] = [
   {
@@ -155,6 +163,14 @@ export const trips: Trip[] = [
     status: "Searching",
     assignedAgentName: "Admin",
     notes: "Focus on low surcharges and overnight flights.",
+    intake: {
+      ...defaultTripIntake,
+      travelerNamesCaptured: true,
+      preferredAirportsConfirmed: true,
+      datesConfirmed: true,
+      cabinConfirmed: true,
+      pointsReviewed: true,
+    },
     awardOptions: awardOptions.filter((option) => option.tripId === "trip_001"),
     hotelOptions: hotelOptions.filter((option) => option.tripId === "trip_001"),
     pinnedAwardOptionId: "award_001",
@@ -174,6 +190,12 @@ export const trips: Trip[] = [
     status: "Intake",
     assignedAgentName: "Agent A",
     notes: "Needs stroller-friendly transfers.",
+    intake: {
+      ...defaultTripIntake,
+      travelerNamesCaptured: true,
+      preferredAirportsConfirmed: false,
+      datesConfirmed: true,
+    },
     awardOptions: awardOptions.filter((option) => option.tripId === "trip_002"),
     hotelOptions: hotelOptions.filter((option) => option.tripId === "trip_002"),
   },
@@ -190,6 +212,16 @@ export const trips: Trip[] = [
     cabinPref: "Economy",
     status: "Booked",
     assignedAgentName: "Agent B",
+    intake: {
+      ...defaultTripIntake,
+      travelerNamesCaptured: true,
+      preferredAirportsConfirmed: true,
+      datesConfirmed: true,
+      cabinConfirmed: true,
+      pointsReviewed: true,
+      docsChecked: true,
+      budgetNotesAdded: true,
+    },
     awardOptions: [],
     hotelOptions: [],
   },
