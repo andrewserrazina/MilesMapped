@@ -30,6 +30,18 @@ export default function SettingsPage() {
     seedSampleTrips();
   };
 
+  if (!isHydrated) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Settings"
+          description="Configure agent preferences, templates, and automations."
+        />
+        <div className="h-40 animate-pulse rounded-xl border border-slate-200 bg-white" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader

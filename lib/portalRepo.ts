@@ -1,6 +1,6 @@
 "use client";
 
-import type { AwardOption, Client, Itinerary, Trip } from "@/lib/types";
+import type { Client, Itinerary, Trip } from "@/lib/types";
 import {
   addAwardOption,
   addClient,
