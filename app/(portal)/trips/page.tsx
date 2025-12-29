@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import DataTable from "@/components/data-table";
+import EmptyState from "@/components/common/EmptyState";
 import StatusBadge from "@/components/common/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { tripStatusOrder } from "@/lib/mock/data";
@@ -33,6 +34,8 @@ export default function TripsPage() {
       return matchesQuery && matchesStatus;
     });
   }, [portalData, query, statusFilter]);
+
+  const hasFilters = query.length > 0 || statusFilter !== "All";
 
   if (!isHydrated) {
     return (
@@ -79,52 +82,69 @@ export default function TripsPage() {
           ))}
         </select>
       </div>
-
-      <DataTable
-        columns={[
-          {
-            key: "client",
-            header: "Client",
-            render: (trip: Trip) => {
-              const client = portalData?.clients.find(
-                (c) => c.id === trip.clientId
-              );
-              return (
-                <div>
-                  <p className="font-semibold text-slate-900">{client?.fullName}</p>
-                  <p className="text-xs text-slate-500">{trip.title}</p>
-                </div>
-              );
+      {filteredTrips.length === 0 ? (
+        <EmptyState
+          title="No trips match your filters"
+          description="Try adjusting your search or status filter to find a trip."
+          primaryActionLabel={hasFilters ? "Clear filters" : undefined}
+          onPrimaryAction={
+            hasFilters
+              ? () => {
+                  setQuery("");
+                  setStatusFilter("All");
+                }
+              : undefined
+          }
+        />
+      ) : (
+        <DataTable
+          columns={[
+            {
+              key: "client",
+              header: "Client",
+              render: (trip: Trip) => {
+                const client = portalData?.clients.find(
+                  (c) => c.id === trip.clientId
+                );
+                return (
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      {client?.fullName}
+                    </p>
+                    <p className="text-xs text-slate-500">{trip.title}</p>
+                  </div>
+                );
+              },
             },
-          },
-          {
-            key: "route",
-            header: "Route",
-            render: (trip: Trip) => (
-              <span className="text-sm text-slate-600">
-                {trip.origin} → {trip.destination}
-              </span>
-            ),
-          },
-          {
-            key: "dates",
-            header: "Dates",
-            render: (trip: Trip) => (
-              <span className="text-sm text-slate-600">
-                {trip.dateStart} → {trip.dateEnd}
-              </span>
-            ),
-          },
-          {
-            key: "status",
-            header: "Status",
-            render: (trip: Trip) => <StatusBadge status={trip.status} />,
-          },
-        ]}
-        data={filteredTrips}
-        emptyMessage="No trips match this filter yet."
-        onRowClick={(trip) => router.push(`/trips/${trip.id}`)}
-      />
+            {
+              key: "route",
+              header: "Route",
+              render: (trip: Trip) => (
+                <span className="text-sm text-slate-600">
+                  {trip.origin} → {trip.destination}
+                </span>
+              ),
+            },
+            {
+              key: "dates",
+              header: "Dates",
+              render: (trip: Trip) => (
+                <span className="text-sm text-slate-600">
+                  {trip.dateStart} → {trip.dateEnd}
+                </span>
+              ),
+            },
+            {
+              key: "status",
+              header: "Status",
+              render: (trip: Trip) => <StatusBadge status={trip.status} />,
+            },
+          ]}
+          data={filteredTrips}
+          emptyMessage="No trips match this filter yet."
+          onRowClick={(trip) => router.push(`/trips/${trip.id}`)}
+        />
+      )}
     </div>
   );
 }

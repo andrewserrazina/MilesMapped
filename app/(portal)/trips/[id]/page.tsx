@@ -10,7 +10,7 @@ import TripHeader from "@/components/trips/TripHeader";
 import TripNextStepBanner from "@/components/trips/TripNextStepBanner";
 import HotelOptionCard from "@/components/hotel-option-card";
 import InternalNotesEditor from "@/components/internal-notes-editor";
-import EmptyState from "@/components/empty-state";
+import EmptyState from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -335,8 +335,8 @@ export default function TripDetailPage() {
               <EmptyState
                 title="No award options yet"
                 description="Add an award option once you find availability to start comparisons."
-                actionLabel={isClosed ? undefined : "Add award option"}
-                onAction={
+                primaryActionLabel={isClosed ? undefined : "Add award option"}
+                onPrimaryAction={
                   isClosed
                     ? undefined
                     : () =>
