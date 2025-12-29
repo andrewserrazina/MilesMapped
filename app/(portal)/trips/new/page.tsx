@@ -25,6 +25,7 @@ const cabinOptions: ClientPreferences["cabinPref"][] = [
   "Business",
   "First",
 ];
+const currentUserName = "Admin";
 
 export default function NewTripPage() {
   const router = useRouter();
@@ -127,6 +128,7 @@ export default function NewTripPage() {
       passengers,
       cabinPref,
       status: "Intake",
+      assignedAgentName: currentUserName,
       awardOptions: [],
       hotelOptions: [],
     };

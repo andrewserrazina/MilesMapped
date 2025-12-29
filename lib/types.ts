@@ -72,6 +72,7 @@ export interface Trip {
   cabinPref: ClientPreferences["cabinPref"];
   cashBudget?: number;
   status: TripStatus;
+  assignedAgentName: string;
   notes?: string;
   awardOptions: AwardOption[];
   hotelOptions: HotelOption[];

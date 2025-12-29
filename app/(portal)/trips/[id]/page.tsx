@@ -25,7 +25,10 @@ import {
   updateTrip,
   usePortalData,
 } from "@/lib/portalStore";
+import { portalRepo } from "@/lib/portalRepo";
 import type { AwardOption, Itinerary, TripStatus } from "@/lib/types";
+
+const agentOptions = ["Admin", "Agent A", "Agent B"];
 
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
@@ -163,8 +166,16 @@ export default function TripDetailPage() {
         title={`Trip: ${client.fullName} — ${trip.title}`}
         status={trip.status}
         statusOptions={tripStatusOrder}
+        assignedAgentName={trip.assignedAgentName}
+        agentOptions={agentOptions}
         onStatusChange={(nextStatus: TripStatus) =>
           updateTrip(trip.id, (current) => ({ ...current, status: nextStatus }))
+        }
+        onAssignedAgentChange={(nextAgent) =>
+          portalRepo.updateTrip(trip.id, (current) => ({
+            ...current,
+            assignedAgentName: nextAgent,
+          }))
         }
         onGenerateItinerary={handleGenerateItinerary}
         generateDisabled={!canGenerate || isClosed}

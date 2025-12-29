@@ -91,6 +91,7 @@ function normalizeTrip(trip: Trip): Trip {
   return {
     ...trip,
     awardOptions,
+    assignedAgentName: trip.assignedAgentName ?? "Admin",
     pinnedAwardOptionId: hasPinned ? trip.pinnedAwardOptionId : undefined,
   };
 }
@@ -166,6 +167,26 @@ export function updateTrip(tripId: string, updater: (trip: Trip) => Trip) {
       ...previous,
       trips: previous.trips.map((item) =>
         item.id === tripId ? updatedTrip : item
+      ),
+    };
+  });
+}
+
+export function updateClient(
+  clientId: string,
+  updater: (client: Client) => Client
+) {
+  setPortalData((previous) => {
+    const client = previous.clients.find((item) => item.id === clientId);
+    if (!client) {
+      return previous;
+    }
+
+    const updatedClient = updater(client);
+    return {
+      ...previous,
+      clients: previous.clients.map((item) =>
+        item.id === clientId ? updatedClient : item
       ),
     };
   });

@@ -3,13 +3,17 @@
 import Link from "next/link";
 import StatusBadge from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import type { TripStatus } from "@/lib/types";
 
 export default function TripHeader({
   title,
   status,
   statusOptions,
+  assignedAgentName,
+  agentOptions,
   onStatusChange,
+  onAssignedAgentChange,
   onGenerateItinerary,
   generateDisabled,
   generateHelperText,
@@ -18,7 +22,10 @@ export default function TripHeader({
   title: string;
   status: TripStatus;
   statusOptions: TripStatus[];
+  assignedAgentName: string;
+  agentOptions: string[];
   onStatusChange: (status: TripStatus) => void;
+  onAssignedAgentChange: (agentName: string) => void;
   onGenerateItinerary: () => void;
   generateDisabled: boolean;
   generateHelperText?: string;
@@ -53,6 +60,23 @@ export default function TripHeader({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Assigned Agent
+            </label>
+            <Select
+              className="h-9 min-w-[160px] py-0"
+              value={assignedAgentName}
+              onChange={(event) => onAssignedAgentChange(event.target.value)}
+              disabled={isReadOnly}
+            >
+              {agentOptions.map((agent) => (
+                <option key={agent} value={agent}>
+                  {agent}
+                </option>
+              ))}
+            </Select>
           </div>
           <div className="flex flex-col items-start gap-1">
             <Button

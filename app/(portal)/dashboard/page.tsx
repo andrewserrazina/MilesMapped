@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { activities } from "@/lib/mock/data";
 import PageHeader from "@/components/page-header";
 import KPIStatCard from "@/components/kpi-stat-card";
@@ -9,17 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
+import { usePortalData } from "@/lib/portalStore";
+
+const currentUserName = "Admin";
 
 export default function DashboardPage() {
-  const [portalData, setPortalData] = useState<PortalData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const data = initializeFromMockIfEmpty();
-    setPortalData(data);
-    setIsLoading(false);
-  }, []);
+  const { data: portalData, isHydrated } = usePortalData();
 
   const kpis = useMemo(() => {
     const clients = portalData?.clients ?? [];
@@ -34,7 +29,9 @@ export default function DashboardPage() {
         label: "Trips In Progress",
         value: trips
           .filter((trip) => trip.status === "Searching" || trip.status === "Draft Ready")
+          .filter((trip) => trip.assignedAgentName === currentUserName)
           .length.toString(),
+        helper: "Assigned to you",
       },
       {
         label: "Trips Delivered",
@@ -48,7 +45,7 @@ export default function DashboardPage() {
     ];
   }, [portalData]);
 
-  if (isLoading) {
+  if (!isHydrated) {
     return (
       <div className="space-y-8">
         <PageHeader
