@@ -1,5 +1,10 @@
 import { clients, itineraries, trips } from "@/lib/mock/data";
-import type { Client, Itinerary, Trip } from "@/lib/types";
+import type {
+  AwardSearchIntegrationsSettings,
+  Client,
+  Itinerary,
+  Trip,
+} from "@/lib/types";
 
 const STORAGE_KEY = "milesmapped.portalData";
 const SCHEMA_VERSION = 1;
@@ -9,23 +14,60 @@ export interface PortalData {
   clients: Client[];
   trips: Trip[];
   itineraries: Itinerary[];
+  awardSearchIntegrations: AwardSearchIntegrationsSettings;
 }
+
+const defaultAwardSearchIntegrations: AwardSearchIntegrationsSettings = {
+  pointMe: {
+    enabled: true,
+    baseUrl: "https://www.point.me",
+    urlTemplate: "",
+  },
+  roame: {
+    enabled: true,
+    baseUrl: "https://roame.travel",
+    urlTemplate: "",
+  },
+};
 
 const defaultPortalData: PortalData = {
   schemaVersion: SCHEMA_VERSION,
   clients,
   trips,
   itineraries,
+  awardSearchIntegrations: defaultAwardSearchIntegrations,
 };
 
 function ensureSchemaVersion(data: PortalData): PortalData {
   if (typeof data.schemaVersion === "number") {
-    return data;
+    return {
+      ...data,
+      awardSearchIntegrations: {
+        pointMe: {
+          ...defaultAwardSearchIntegrations.pointMe,
+          ...data.awardSearchIntegrations?.pointMe,
+        },
+        roame: {
+          ...defaultAwardSearchIntegrations.roame,
+          ...data.awardSearchIntegrations?.roame,
+        },
+      },
+    };
   }
 
   return {
     ...data,
     schemaVersion: SCHEMA_VERSION,
+    awardSearchIntegrations: {
+      pointMe: {
+        ...defaultAwardSearchIntegrations.pointMe,
+        ...data.awardSearchIntegrations?.pointMe,
+      },
+      roame: {
+        ...defaultAwardSearchIntegrations.roame,
+        ...data.awardSearchIntegrations?.roame,
+      },
+    },
   };
 }
 

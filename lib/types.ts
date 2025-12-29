@@ -117,3 +117,14 @@ export interface ActivityItem {
   createdAt: string;
   category: "Trip" | "Client" | "System";
 }
+
+export interface AwardSearchIntegrationConfig {
+  enabled: boolean;
+  baseUrl: string;
+  urlTemplate: string;
+}
+
+export interface AwardSearchIntegrationsSettings {
+  pointMe: AwardSearchIntegrationConfig;
+  roame: AwardSearchIntegrationConfig;
+}

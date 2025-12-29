@@ -1,6 +1,11 @@
 "use client";
 
-import type { Client, Itinerary, Trip } from "@/lib/types";
+import type {
+  AwardSearchIntegrationsSettings,
+  Client,
+  Itinerary,
+  Trip,
+} from "@/lib/types";
 import {
   addAwardOption,
   addClient,
@@ -9,6 +14,7 @@ import {
   isTripReadOnly,
   removeAwardOption,
   setPinnedAwardOption,
+  updateAwardSearchIntegrations,
   updateAwardOption,
   updateClient,
   updateTrip,
@@ -53,6 +59,17 @@ export const portalRepo = {
   createItinerary: (itinerary: Itinerary) => {
     addItinerary(itinerary);
     return itinerary;
+  },
+
+  getAwardSearchIntegrations: (data?: PortalData | null) =>
+    data?.awardSearchIntegrations ?? null,
+  updateAwardSearchIntegrations: (
+    patch: Partial<{
+      pointMe: Partial<AwardSearchIntegrationsSettings["pointMe"]>;
+      roame: Partial<AwardSearchIntegrationsSettings["roame"]>;
+    }>
+  ) => {
+    updateAwardSearchIntegrations(patch);
   },
 
   usePortalData,
