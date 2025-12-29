@@ -65,7 +65,7 @@ export default function ClientsPage() {
             href="/clients/new"
             className={cn(buttonVariants(), "whitespace-nowrap")}
           >
-            + Add Client
+            + New Client
           </Link>
         }
       />

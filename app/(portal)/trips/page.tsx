@@ -76,7 +76,7 @@ export default function TripsPage() {
             href="/trips/new"
             className={cn(buttonVariants(), "whitespace-nowrap")}
           >
-            + Add Trip
+            + New Trip
           </Link>
         }
       />
