@@ -20,6 +20,8 @@ export default function TripHeader({
   generateHelperText,
   statusOptionDisabled,
   statusHelperText,
+  assignedAgentDisabled,
+  assignedAgentHelperText,
   isReadOnly,
   actionButtons,
 }: {
@@ -35,6 +37,8 @@ export default function TripHeader({
   generateHelperText?: string;
   statusOptionDisabled?: (status: TripStatus) => boolean;
   statusHelperText?: string;
+  assignedAgentDisabled?: boolean;
+  assignedAgentHelperText?: string;
   isReadOnly: boolean;
   actionButtons?: ReactNode;
 }) {
@@ -91,7 +95,7 @@ export default function TripHeader({
               className="h-9 min-w-[160px] py-0"
               value={assignedAgentName}
               onChange={(event) => onAssignedAgentChange(event.target.value)}
-              disabled={isReadOnly}
+              disabled={isReadOnly || assignedAgentDisabled}
             >
               {agentOptions.map((agent) => (
                 <option key={agent} value={agent}>
@@ -99,6 +103,11 @@ export default function TripHeader({
                 </option>
               ))}
             </Select>
+            {assignedAgentDisabled && assignedAgentHelperText ? (
+              <span className="text-xs text-slate-400">
+                {assignedAgentHelperText}
+              </span>
+            ) : null}
           </div>
           <div className="flex flex-col items-start gap-1">
             <Button

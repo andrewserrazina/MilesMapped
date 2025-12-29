@@ -17,6 +17,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { defaultTripIntake, type ClientPreferences, type Trip } from "@/lib/types";
 import { portalRepo } from "@/lib/portalRepo";
+import { useCurrentUser } from "@/lib/auth/mockAuth";
+import { can } from "@/lib/auth/permissions";
 
 const cabinOptions: ClientPreferences["cabinPref"][] = [
   "Economy",
@@ -24,12 +26,13 @@ const cabinOptions: ClientPreferences["cabinPref"][] = [
   "Business",
   "First",
 ];
-const currentUserName = "Admin";
 
 export default function NewTripPage() {
   const router = useRouter();
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
   const clients = portalRepo.listClients(portalData);
+  const currentUser = useCurrentUser();
+  const canCreateTrip = can(currentUser, "trip.create");
 
   const [clientSearch, setClientSearch] = useState("");
   const [clientId, setClientId] = useState("");
@@ -114,6 +117,9 @@ export default function NewTripPage() {
     if (!isValid) {
       return;
     }
+    if (!canCreateTrip) {
+      return;
+    }
 
     const newTrip: Trip = {
       id: crypto.randomUUID(),
@@ -127,7 +133,7 @@ export default function NewTripPage() {
       passengers,
       cabinPref,
       status: "Intake",
-      assignedAgentName: currentUserName,
+      assignedAgentName: currentUser.name,
       intake: { ...defaultTripIntake },
       awardOptions: [],
       hotelOptions: [],
@@ -154,62 +160,63 @@ export default function NewTripPage() {
           <CardTitle>Trip intake</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-5">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="client">
-                Client
-              </label>
-              <div className="relative">
-                <Input
-                  id="client"
-                  value={clientSearch}
-                  onChange={(event) => {
-                    setClientSearch(event.target.value);
-                    setClientId("");
-                    setIsClientDropdownOpen(true);
-                  }}
-                  onFocus={() => setIsClientDropdownOpen(true)}
-                  onBlur={() => {
-                    setTouchedFields((previous) => ({
-                      ...previous,
-                      clientId: true,
-                    }));
-                    window.setTimeout(() => setIsClientDropdownOpen(false), 150);
-                  }}
-                  placeholder="Search clients"
-                />
-                {isClientDropdownOpen ? (
-                  <div className="absolute z-20 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
-                    {filteredClients.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-slate-500">
-                        No matching clients.
-                      </div>
-                    ) : (
-                      <div className="max-h-56 overflow-y-auto">
-                        {filteredClients.map((client) => (
-                          <button
-                            key={client.id}
-                            type="button"
-                            className="flex w-full flex-col items-start gap-1 px-3 py-2 text-left text-sm hover:bg-slate-50"
-                            onMouseDown={() => handleClientSelect(client.id)}
-                          >
-                            <span className="font-medium text-slate-900">
-                              {client.fullName}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              {client.email}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+          <CardContent>
+            <fieldset className="space-y-5" disabled={!canCreateTrip}>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-700" htmlFor="client">
+                  Client
+                </label>
+                <div className="relative">
+                  <Input
+                    id="client"
+                    value={clientSearch}
+                    onChange={(event) => {
+                      setClientSearch(event.target.value);
+                      setClientId("");
+                      setIsClientDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsClientDropdownOpen(true)}
+                    onBlur={() => {
+                      setTouchedFields((previous) => ({
+                        ...previous,
+                        clientId: true,
+                      }));
+                      window.setTimeout(() => setIsClientDropdownOpen(false), 150);
+                    }}
+                    placeholder="Search clients"
+                  />
+                  {isClientDropdownOpen ? (
+                    <div className="absolute z-20 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+                      {filteredClients.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-slate-500">
+                          No matching clients.
+                        </div>
+                      ) : (
+                        <div className="max-h-56 overflow-y-auto">
+                          {filteredClients.map((client) => (
+                            <button
+                              key={client.id}
+                              type="button"
+                              className="flex w-full flex-col items-start gap-1 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                              onMouseDown={() => handleClientSelect(client.id)}
+                            >
+                              <span className="font-medium text-slate-900">
+                                {client.fullName}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {client.email}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+                {shouldShowError("clientId") ? (
+                  <p className="text-xs text-red-500">{errors.clientId}</p>
                 ) : null}
               </div>
-              {shouldShowError("clientId") ? (
-                <p className="text-xs text-red-500">{errors.clientId}</p>
-              ) : null}
-            </div>
 
             {selectedClient ? (
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
@@ -405,6 +412,7 @@ export default function NewTripPage() {
                 </Select>
               </div>
             </div>
+            </fieldset>
           </CardContent>
           <CardFooter className="flex flex-wrap justify-between gap-3">
             <Link
@@ -413,13 +421,20 @@ export default function NewTripPage() {
             >
               Cancel
             </Link>
-            <button
-              type="submit"
-              className={cn(buttonVariants())}
-              disabled={!isValid}
-            >
-              Create Trip
-            </button>
+            <div className="flex flex-col items-end gap-2">
+              <button
+                type="submit"
+                className={cn(buttonVariants())}
+                disabled={!isValid || !canCreateTrip}
+              >
+                Create Trip
+              </button>
+              {!canCreateTrip ? (
+                <p className="text-xs text-slate-400">
+                  Only admins can create trips.
+                </p>
+              ) : null}
+            </div>
           </CardFooter>
         </form>
       </Card>

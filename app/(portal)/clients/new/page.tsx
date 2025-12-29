@@ -17,17 +17,22 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Client, ClientStatus } from "@/lib/types";
 import { portalRepo } from "@/lib/portalRepo";
+import { useCurrentUser } from "@/lib/auth/mockAuth";
+import { can } from "@/lib/auth/permissions";
 
 const statusOptions: ClientStatus[] = ["Lead", "Active", "Completed"];
 
 export default function NewClientPage() {
   const router = useRouter();
   const { isHydrated } = portalRepo.usePortalData();
+  const currentUser = useCurrentUser();
+  const canCreateClient = can(currentUser, "client.create");
+  const canAssignAgent = can(currentUser, "trip.assign");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState<ClientStatus>("Active");
-  const [assignedAgentName, setAssignedAgentName] = useState("Admin");
+  const [assignedAgentName, setAssignedAgentName] = useState(currentUser.name);
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
@@ -56,6 +61,9 @@ export default function NewClientPage() {
     event.preventDefault();
     setHasSubmitted(true);
     if (!isValid) {
+      return;
+    }
+    if (!canCreateClient) {
       return;
     }
 
@@ -103,27 +111,28 @@ export default function NewClientPage() {
           <CardTitle>Client details</CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-5">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="fullName">
-                Full name
-              </label>
-              <Input
-                id="fullName"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                onBlur={() =>
-                  setTouchedFields((previous) => ({
-                    ...previous,
-                    fullName: true,
-                  }))
-                }
-                placeholder="Enter client name"
-              />
-              {shouldShowError("fullName") ? (
-                <p className="text-xs text-red-500">{errors.fullName}</p>
-              ) : null}
-            </div>
+          <CardContent>
+            <fieldset className="space-y-5" disabled={!canCreateClient}>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-slate-700" htmlFor="fullName">
+                  Full name
+                </label>
+                <Input
+                  id="fullName"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  onBlur={() =>
+                    setTouchedFields((previous) => ({
+                      ...previous,
+                      fullName: true,
+                    }))
+                  }
+                  placeholder="Enter client name"
+                />
+                {shouldShowError("fullName") ? (
+                  <p className="text-xs text-red-500">{errors.fullName}</p>
+                ) : null}
+              </div>
 
             <div className="grid gap-2">
               <label className="text-sm font-medium text-slate-700" htmlFor="email">
@@ -176,20 +185,27 @@ export default function NewClientPage() {
               </Select>
             </div>
 
-            <div className="grid gap-2">
-              <label
-                className="text-sm font-medium text-slate-700"
-                htmlFor="assignedAgentName"
-              >
-                Assigned agent
-              </label>
-              <Input
-                id="assignedAgentName"
-                value={assignedAgentName}
-                onChange={(event) => setAssignedAgentName(event.target.value)}
-                placeholder="Admin"
-              />
-            </div>
+              <div className="grid gap-2">
+                <label
+                  className="text-sm font-medium text-slate-700"
+                  htmlFor="assignedAgentName"
+                >
+                  Assigned agent
+                </label>
+                <Input
+                  id="assignedAgentName"
+                  value={assignedAgentName}
+                  onChange={(event) => setAssignedAgentName(event.target.value)}
+                  placeholder="Admin"
+                  disabled={!canAssignAgent}
+                />
+                {!canAssignAgent ? (
+                  <p className="text-xs text-slate-400">
+                    Only admins can reassign agents.
+                  </p>
+                ) : null}
+              </div>
+            </fieldset>
           </CardContent>
           <CardFooter className="flex flex-wrap justify-between gap-3">
             <Link
@@ -198,13 +214,20 @@ export default function NewClientPage() {
             >
               Cancel
             </Link>
-            <button
-              type="submit"
-              className={cn(buttonVariants())}
-              disabled={!isValid}
-            >
-              Create Client
-            </button>
+            <div className="flex flex-col items-end gap-2">
+              <button
+                type="submit"
+                className={cn(buttonVariants())}
+                disabled={!isValid || !canCreateClient}
+              >
+                Create Client
+              </button>
+              {!canCreateClient ? (
+                <p className="text-xs text-slate-400">
+                  Only admins can create clients.
+                </p>
+              ) : null}
+            </div>
           </CardFooter>
         </form>
       </Card>

@@ -21,6 +21,8 @@ import { buildAwardSearchUrl } from "@/lib/awardSearchLinks";
 import { tripStatusOrder } from "@/lib/mock/data";
 import { portalRepo } from "@/lib/portalRepo";
 import type { AwardOption, Itinerary, TripIntake, TripStatus } from "@/lib/types";
+import { useCurrentUser } from "@/lib/auth/mockAuth";
+import { can } from "@/lib/auth/permissions";
 
 const agentOptions = ["Admin", "Agent A", "Agent B"];
 
@@ -49,6 +51,7 @@ export default function TripDetailPage() {
   const [newlyAddedOptionId, setNewlyAddedOptionId] = useState<string | null>(
     null
   );
+  const currentUser = useCurrentUser();
 
   const trip = useMemo(
     () => portalRepo.getTrip(portalData, params.id),
@@ -116,7 +119,15 @@ export default function TripDetailPage() {
 
   const hasPinnedOption = Boolean(pinnedOption);
   const isClosed = trip ? portalRepo.isTripReadOnly(trip) : false;
-  const canGenerate = trip?.status === "Draft Ready" && hasPinnedOption;
+  const canEditTrip = can(currentUser, "trip.edit");
+  const canCloseTrip = can(currentUser, "trip.close");
+  const canMarkSent = can(currentUser, "trip.markSent");
+  const canMarkBooked = can(currentUser, "trip.markBooked");
+  const canAssignAgent = can(currentUser, "trip.assign");
+  const canGenerate =
+    trip?.status === "Draft Ready" &&
+    hasPinnedOption &&
+    can(currentUser, "itinerary.generate");
   const awardSearchIntegrations =
     portalRepo.getAwardSearchIntegrations(portalData);
   const showPointMe = Boolean(awardSearchIntegrations?.pointMe.enabled);
@@ -140,6 +151,11 @@ export default function TripDetailPage() {
   const canMoveToSearching = completedIntakeCount >= 4;
   const showIntakeChecklist =
     trip?.status === "Intake" || trip?.status === "Searching";
+  const statusPermissionHelperText = !canEditTrip
+    ? "Only admins can update trip status beyond Sent/Booked."
+    : !canCloseTrip
+      ? "Only admins can close trips."
+      : undefined;
 
   useEffect(() => {
     if (!toastMessage) {
@@ -174,6 +190,8 @@ export default function TripDetailPage() {
       ? "Set status to Draft Ready to generate."
       : !hasPinnedOption
         ? "Pin an award option to generate."
+        : !can(currentUser, "itinerary.generate")
+          ? "You don’t have permission to generate itineraries."
         : undefined;
 
   if (!isHydrated) {
@@ -216,6 +234,9 @@ export default function TripDetailPage() {
     if (!trip) {
       return;
     }
+    if (!can(currentUser, "award.add")) {
+      return;
+    }
 
     if (awardModalState.mode === "add") {
       const created = buildAwardOption(values);
@@ -239,6 +260,9 @@ export default function TripDetailPage() {
     if (!trip) {
       return;
     }
+    if (!can(currentUser, "award.add")) {
+      return;
+    }
 
     const created = buildAwardOption(values);
     portalRepo.addAwardOption(trip.id, created);
@@ -255,6 +279,9 @@ export default function TripDetailPage() {
 
   const handleGenerateItinerary = () => {
     if (!trip || !pinnedOption) {
+      return;
+    }
+    if (!can(currentUser, "itinerary.generate")) {
       return;
     }
 
@@ -316,6 +343,22 @@ export default function TripDetailPage() {
         agentOptions={agentOptions}
         onStatusChange={(nextStatus: TripStatus) =>
           portalRepo.updateTrip(trip.id, (current) => {
+            if (!canEditTrip) {
+              if (
+                (nextStatus === "Sent" && !canMarkSent) ||
+                (nextStatus === "Booked" && !canMarkBooked)
+              ) {
+                return current;
+              }
+              if (nextStatus !== "Sent" && nextStatus !== "Booked") {
+                return current;
+              }
+            }
+
+            if (!canCloseTrip && nextStatus === "Closed") {
+              return current;
+            }
+
             if (
               current.status === "Intake" &&
               nextStatus === "Searching" &&
@@ -331,23 +374,55 @@ export default function TripDetailPage() {
           })
         }
         onAssignedAgentChange={(nextAgent) =>
-          portalRepo.updateTrip(trip.id, (current) => ({
-            ...current,
-            assignedAgentName: nextAgent,
-          }))
+          portalRepo.updateTrip(trip.id, (current) => {
+            if (!canAssignAgent) {
+              return current;
+            }
+            return {
+              ...current,
+              assignedAgentName: nextAgent,
+            };
+          })
         }
         onGenerateItinerary={handleGenerateItinerary}
         generateDisabled={!canGenerate || isClosed}
         generateHelperText={generateHelperText}
-        statusOptionDisabled={(option) =>
-          trip.status === "Intake" && option === "Searching" && !canMoveToSearching
-        }
+        statusOptionDisabled={(option) => {
+          if (!canEditTrip) {
+            if (option === "Sent") {
+              return !canMarkSent;
+            }
+            if (option === "Booked") {
+              return !canMarkBooked;
+            }
+            return true;
+          }
+          if (option === "Closed" && !canCloseTrip) {
+            return true;
+          }
+          if (
+            trip.status === "Intake" &&
+            option === "Searching" &&
+            !canMoveToSearching
+          ) {
+            return true;
+          }
+          return false;
+        }}
         statusHelperText={
-          trip.status === "Intake" && !canMoveToSearching
-            ? "Complete at least 4 intake items to start searching."
-            : undefined
+          !canEditTrip
+            ? statusPermissionHelperText
+            : trip.status === "Intake" && !canMoveToSearching
+              ? "Complete at least 4 intake items to start searching."
+              : statusPermissionHelperText
         }
         isReadOnly={isClosed}
+        assignedAgentDisabled={!canAssignAgent}
+        assignedAgentHelperText={
+          !canAssignAgent
+            ? "Only admins can reassign agents."
+            : undefined
+        }
         actionButtons={
           awardSearchIntegrations && hasAwardSearchButtons ? (
             <>
@@ -434,6 +509,11 @@ export default function TripDetailPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm text-slate-600">
+                  {!canEditTrip ? (
+                    <p className="text-xs text-slate-400">
+                      Only admins can update intake checklist items.
+                    </p>
+                  ) : null}
                   <div className="grid gap-3 md:grid-cols-2">
                     {intakeItems.map((item) => (
                       <label
@@ -451,7 +531,7 @@ export default function TripDetailPage() {
                               },
                             }))
                           }
-                          disabled={isClosed}
+                          disabled={isClosed || !canEditTrip}
                         />
                         <span>{item.label}</span>
                       </label>
@@ -602,19 +682,24 @@ export default function TripDetailPage() {
                   onClick={() =>
                     setAwardModalState({ open: true, mode: "add", option: null })
                   }
-                  disabled={isClosed}
+                  disabled={isClosed || !can(currentUser, "award.add")}
                 >
                   + Add Award Option
                 </Button>
                 <Button
                   variant="default"
                   onClick={() => setImportModalOpen(true)}
-                  disabled={isClosed}
+                  disabled={isClosed || !can(currentUser, "award.add")}
                 >
                   Import Award Option
                 </Button>
               </div>
             </div>
+            {!can(currentUser, "award.add") ? (
+              <p className="text-xs text-slate-400">
+                You don’t have permission to add award options.
+              </p>
+            ) : null}
 
             {orderedAwardOptions.length ? (
               <div className="space-y-4">
@@ -622,14 +707,14 @@ export default function TripDetailPage() {
                   const isPinned = trip.pinnedAwardOptionId === option.id;
                   return (
                     <div key={option.id} id={`award-option-${option.id}`}>
-                      <AwardOptionCard
-                        option={option}
-                        isPinned={isPinned}
-                        isReadOnly={isClosed}
-                        onPin={() =>
-                          portalRepo.setPinnedAwardOption(trip.id, option.id)
-                        }
-                        onEdit={() =>
+                    <AwardOptionCard
+                      option={option}
+                      isPinned={isPinned}
+                      isReadOnly={isClosed || !can(currentUser, "award.add")}
+                      onPin={() =>
+                        portalRepo.setPinnedAwardOption(trip.id, option.id)
+                      }
+                      onEdit={() =>
                           setAwardModalState({
                             open: true,
                             mode: "edit",
