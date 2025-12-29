@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import PageHeader from "@/components/page-header";
-import EmptyState from "@/components/empty-state";
+import EmptyState from "@/components/common/EmptyState";
 import StatusBadge from "@/components/common/StatusBadge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,7 +54,7 @@ export default function ItinerariesPage() {
 
       {itineraries.length === 0 ? (
         <EmptyState
-          title="No itineraries yet. Generate one from a trip."
+          title="No itineraries yet"
           description="Head to a trip and pin an award option to generate."
         />
       ) : (

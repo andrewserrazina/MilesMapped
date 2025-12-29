@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import DataTable from "@/components/data-table";
+import EmptyState from "@/components/common/EmptyState";
 import { Input } from "@/components/ui/input";
 import type { Client } from "@/lib/types";
 import { usePortalData } from "@/lib/portalStore";
@@ -31,6 +32,8 @@ export default function ClientsPage() {
       return matchesQuery && matchesStatus;
     });
   }, [portalData, query, statusFilter]);
+
+  const hasFilters = query.length > 0 || statusFilter !== "All";
 
   if (!isHydrated) {
     return (
@@ -77,50 +80,65 @@ export default function ClientsPage() {
           ))}
         </select>
       </div>
-
-      <DataTable
-        columns={[
-          {
-            key: "name",
-            header: "Name",
-            render: (client: Client) => (
-              <div>
-                <p className="font-semibold text-slate-900">{client.fullName}</p>
-                <p className="text-xs text-slate-500">{client.email}</p>
-              </div>
-            ),
-          },
-          {
-            key: "status",
-            header: "Status",
-            render: (client: Client) => (
-              <span className="text-sm text-slate-600">{client.status}</span>
-            ),
-          },
-          {
-            key: "trips",
-            header: "Trips",
-            render: (client: Client) => (
-              <span className="text-sm text-slate-600">
-                {portalData?.trips.filter((trip) => trip.clientId === client.id).length ??
-                  0}
-              </span>
-            ),
-          },
-          {
-            key: "agent",
-            header: "Assigned Agent",
-            render: (client: Client) => (
-              <span className="text-sm text-slate-600">
-                {client.assignedAgentName}
-              </span>
-            ),
-          },
-        ]}
-        data={filteredClients}
-        emptyMessage="No clients match this filter yet."
-        onRowClick={(client) => router.push(`/clients/${client.id}`)}
-      />
+      {filteredClients.length === 0 ? (
+        <EmptyState
+          title="No clients match your filters"
+          description="Try adjusting your search or status filter to find a client."
+          primaryActionLabel={hasFilters ? "Clear filters" : undefined}
+          onPrimaryAction={
+            hasFilters
+              ? () => {
+                  setQuery("");
+                  setStatusFilter("All");
+                }
+              : undefined
+          }
+        />
+      ) : (
+        <DataTable
+          columns={[
+            {
+              key: "name",
+              header: "Name",
+              render: (client: Client) => (
+                <div>
+                  <p className="font-semibold text-slate-900">{client.fullName}</p>
+                  <p className="text-xs text-slate-500">{client.email}</p>
+                </div>
+              ),
+            },
+            {
+              key: "status",
+              header: "Status",
+              render: (client: Client) => (
+                <span className="text-sm text-slate-600">{client.status}</span>
+              ),
+            },
+            {
+              key: "trips",
+              header: "Trips",
+              render: (client: Client) => (
+                <span className="text-sm text-slate-600">
+                  {portalData?.trips.filter((trip) => trip.clientId === client.id)
+                    .length ?? 0}
+                </span>
+              ),
+            },
+            {
+              key: "agent",
+              header: "Assigned Agent",
+              render: (client: Client) => (
+                <span className="text-sm text-slate-600">
+                  {client.assignedAgentName}
+                </span>
+              ),
+            },
+          ]}
+          data={filteredClients}
+          emptyMessage="No clients match this filter yet."
+          onRowClick={(client) => router.push(`/clients/${client.id}`)}
+        />
+      )}
     </div>
   );
 }

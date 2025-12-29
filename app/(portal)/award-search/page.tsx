@@ -1,5 +1,5 @@
 import PageHeader from "@/components/page-header";
-import EmptyState from "@/components/empty-state";
+import EmptyState from "@/components/common/EmptyState";
 
 export default function AwardSearchPage() {
   return (
