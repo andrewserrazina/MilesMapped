@@ -192,14 +192,7 @@ export const trips: Trip[] = [
   },
 ];
 
-export const itineraries: Itinerary[] = [
-  {
-    id: "itinerary_001",
-    tripId: "trip_001",
-    generatedAt: "2024-08-18",
-    sections: ["Outbound flight summary", "Return options", "Hotel picks"],
-  },
-];
+export const itineraries: Itinerary[] = [];
 
 export const activities: ActivityItem[] = [
   {

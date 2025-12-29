@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import AwardOptionCard from "@/components/trips/AwardOptionCard";
 import AwardOptionModal, {
   type AwardOptionFormOutput,
@@ -14,34 +14,98 @@ import EmptyState from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { clients, getTripById, tripStatusOrder } from "@/lib/mock/data";
-import type { AwardOption, TripStatus } from "@/lib/types";
+import { tripStatusOrder } from "@/lib/mock/data";
+import {
+  initializeFromMockIfEmpty,
+  savePortalData,
+  type PortalData,
+} from "@/lib/storage";
+import type { AwardOption, Client, Itinerary, Trip, TripStatus } from "@/lib/types";
 
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
-  const initialTrip = useMemo(() => getTripById(params.id), [params.id]);
-  const client = useMemo(
-    () => clients.find((item) => item.id === initialTrip?.clientId),
-    [initialTrip]
-  );
-
-  const [status, setStatus] = useState<TripStatus>(
-    initialTrip?.status ?? "Intake"
-  );
-  const [awardOptions, setAwardOptions] = useState<AwardOption[]>(
-    initialTrip?.awardOptions ?? []
-  );
-  const [pinnedAwardOptionId, setPinnedAwardOptionId] = useState<
-    string | undefined
-  >(initialTrip?.pinnedAwardOptionId);
-  const [notes, setNotes] = useState(initialTrip?.notes ?? "");
+  const router = useRouter();
+  const [portalData, setPortalData] = useState<PortalData | null>(null);
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [awardModalState, setAwardModalState] = useState<{
     open: boolean;
     mode: "add" | "edit";
     option: AwardOption | null;
   }>({ open: false, mode: "add", option: null });
 
-  if (!initialTrip || !client) {
+  useEffect(() => {
+    const data = initializeFromMockIfEmpty();
+    const foundTrip = data.trips.find((item) => item.id === params.id) ?? null;
+    const foundClient = foundTrip
+      ? data.clients.find((item) => item.id === foundTrip.clientId) ?? null
+      : null;
+
+    setPortalData(data);
+    setTrip(foundTrip);
+    setClient(foundClient);
+    setIsLoading(false);
+  }, [params.id]);
+
+  const persistTrip = (updatedTrip: Trip) => {
+    setTrip(updatedTrip);
+    setPortalData((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      const updatedData = {
+        ...prev,
+        trips: prev.trips.map((item) =>
+          item.id === updatedTrip.id ? updatedTrip : item
+        ),
+      };
+      savePortalData(updatedData);
+      return updatedData;
+    });
+  };
+
+  const pinnedOption = trip?.awardOptions.find(
+    (option) => option.id === trip.pinnedAwardOptionId
+  );
+  const orderedAwardOptions = useMemo(() => {
+    if (!trip) {
+      return [];
+    }
+
+    const unpinned = trip.awardOptions.filter(
+      (option) => option.id !== trip.pinnedAwardOptionId
+    );
+    const sortedUnpinned = [...unpinned].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    return pinnedOption ? [pinnedOption, ...sortedUnpinned] : sortedUnpinned;
+  }, [trip, pinnedOption]);
+
+  const hasPinnedOption = Boolean(pinnedOption);
+  const isClosed = trip?.status === "Closed";
+  const canGenerate = trip?.status === "Draft Ready" && hasPinnedOption;
+
+  const generateHelperText =
+    trip?.status !== "Draft Ready"
+      ? "Set status to Draft Ready to generate."
+      : !hasPinnedOption
+        ? "Pin an award option to generate."
+        : undefined;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-6">
+          <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
+          <div className="mt-4 h-8 w-1/2 animate-pulse rounded bg-slate-100" />
+          <div className="mt-6 h-32 w-full animate-pulse rounded bg-slate-100" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!trip || !client) {
     return (
       <Card>
         <CardContent className="p-6 text-sm text-slate-500">
@@ -51,35 +115,15 @@ export default function TripDetailPage() {
     );
   }
 
-  const isClosed = status === "Closed";
-  const pinnedOption = awardOptions.find(
-    (option) => option.id === pinnedAwardOptionId
-  );
-  const hasPinnedOption = Boolean(pinnedOption);
-  const canGenerate = status === "Draft Ready" && hasPinnedOption;
-
-  const orderedAwardOptions = useMemo(() => {
-    const unpinned = awardOptions.filter(
-      (option) => option.id !== pinnedAwardOptionId
-    );
-    const sortedUnpinned = [...unpinned].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    return pinnedOption ? [pinnedOption, ...sortedUnpinned] : sortedUnpinned;
-  }, [awardOptions, pinnedAwardOptionId, pinnedOption]);
-
-  const generateHelperText =
-    status !== "Draft Ready"
-      ? "Set status to Draft Ready to generate."
-      : !hasPinnedOption
-        ? "Pin an award option to generate."
-        : undefined;
-
   const handleSaveAwardOption = (values: AwardOptionFormOutput) => {
+    if (!trip) {
+      return;
+    }
+
     if (awardModalState.mode === "add") {
       const created: AwardOption = {
         id: `award_${Date.now()}`,
-        tripId: initialTrip.id,
+        tripId: trip.id,
         program: values.program,
         route: values.route,
         milesRequired: values.milesRequired,
@@ -89,10 +133,14 @@ export default function TripDetailPage() {
         badges: values.badges,
         createdAt: new Date().toISOString(),
       };
-      setAwardOptions((prev) => [created, ...prev]);
+      persistTrip({
+        ...trip,
+        awardOptions: [created, ...trip.awardOptions],
+      });
     } else if (awardModalState.option) {
-      setAwardOptions((prev) =>
-        prev.map((item) =>
+      persistTrip({
+        ...trip,
+        awardOptions: trip.awardOptions.map((item) =>
           item.id === awardModalState.option?.id
             ? {
                 ...item,
@@ -105,35 +153,71 @@ export default function TripDetailPage() {
                 badges: values.badges,
               }
             : item
-        )
-      );
+        ),
+      });
     }
     setAwardModalState({ open: false, mode: "add", option: null });
   };
 
   const handleRemoveAwardOption = (option: AwardOption) => {
     if (window.confirm("Remove this award option?")) {
-      setAwardOptions((prev) => prev.filter((item) => item.id !== option.id));
-      if (pinnedAwardOptionId === option.id) {
-        setPinnedAwardOptionId(undefined);
-      }
+      const updatedOptions = trip.awardOptions.filter(
+        (item) => item.id !== option.id
+      );
+      persistTrip({
+        ...trip,
+        awardOptions: updatedOptions,
+        pinnedAwardOptionId:
+          trip.pinnedAwardOptionId === option.id
+            ? undefined
+            : trip.pinnedAwardOptionId,
+      });
     }
+  };
+
+  const handleGenerateItinerary = () => {
+    if (!portalData || !trip || !pinnedOption) {
+      return;
+    }
+
+    const backupOptions = trip.awardOptions.filter(
+      (option) => option.id !== pinnedOption.id
+    );
+
+    const newItinerary: Itinerary = {
+      id: `itinerary_${Date.now()}`,
+      tripId: trip.id,
+      generatedAt: new Date().toISOString(),
+      optionAId: pinnedOption.id,
+      backupOptionIds: backupOptions.map((option) => option.id),
+    };
+
+    const updatedData: PortalData = {
+      ...portalData,
+      itineraries: [newItinerary, ...portalData.itineraries],
+    };
+
+    savePortalData(updatedData);
+    setPortalData(updatedData);
+    router.push(`/itineraries/${newItinerary.id}`);
   };
 
   return (
     <div className="space-y-6">
       <TripHeader
-        title={`Trip: ${client.fullName} — ${initialTrip.title}`}
-        status={status}
+        title={`Trip: ${client.fullName} — ${trip.title}`}
+        status={trip.status}
         statusOptions={tripStatusOrder}
-        onStatusChange={setStatus}
-        onGenerateItinerary={() => undefined}
+        onStatusChange={(nextStatus: TripStatus) =>
+          persistTrip({ ...trip, status: nextStatus })
+        }
+        onGenerateItinerary={handleGenerateItinerary}
         generateDisabled={!canGenerate || isClosed}
         generateHelperText={generateHelperText}
         isReadOnly={isClosed}
       />
 
-      <TripNextStepBanner status={status} />
+      <TripNextStepBanner status={trip.status} />
 
       <Tabs defaultValue="overview">
         <TabsList>
@@ -155,7 +239,7 @@ export default function TripDetailPage() {
                     Route
                   </p>
                   <p className="font-semibold text-slate-900">
-                    {initialTrip.origin} → {initialTrip.destination}
+                    {trip.origin} → {trip.destination}
                   </p>
                 </div>
                 <div>
@@ -163,7 +247,7 @@ export default function TripDetailPage() {
                     Dates
                   </p>
                   <p className="font-semibold text-slate-900">
-                    {initialTrip.dateStart} to {initialTrip.dateEnd}
+                    {trip.dateStart} to {trip.dateEnd}
                   </p>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
@@ -172,7 +256,7 @@ export default function TripDetailPage() {
                       Flexibility
                     </p>
                     <p className="font-semibold text-slate-900">
-                      ±{initialTrip.flexibilityDays} days
+                      ±{trip.flexibilityDays} days
                     </p>
                   </div>
                   <div>
@@ -180,7 +264,7 @@ export default function TripDetailPage() {
                       Passengers
                     </p>
                     <p className="font-semibold text-slate-900">
-                      {initialTrip.passengers}
+                      {trip.passengers}
                     </p>
                   </div>
                   <div>
@@ -188,17 +272,17 @@ export default function TripDetailPage() {
                       Cabin
                     </p>
                     <p className="font-semibold text-slate-900">
-                      {initialTrip.cabinPref}
+                      {trip.cabinPref}
                     </p>
                   </div>
                 </div>
-                {initialTrip.cashBudget ? (
+                {trip.cashBudget ? (
                   <div>
                     <p className="text-xs uppercase tracking-wide text-slate-400">
                       Cash Budget
                     </p>
                     <p className="font-semibold text-slate-900">
-                      ${initialTrip.cashBudget}
+                      ${trip.cashBudget}
                     </p>
                   </div>
                 ) : null}
@@ -272,14 +356,19 @@ export default function TripDetailPage() {
             {orderedAwardOptions.length ? (
               <div className="space-y-4">
                 {orderedAwardOptions.map((option) => {
-                  const isPinned = pinnedAwardOptionId === option.id;
+                  const isPinned = trip.pinnedAwardOptionId === option.id;
                   return (
                     <AwardOptionCard
                       key={option.id}
                       option={option}
                       isPinned={isPinned}
                       isReadOnly={isClosed}
-                      onPin={() => setPinnedAwardOptionId(option.id)}
+                      onPin={() =>
+                        persistTrip({
+                          ...trip,
+                          pinnedAwardOptionId: option.id,
+                        })
+                      }
                       onEdit={() =>
                         setAwardModalState({
                           open: true,
@@ -314,8 +403,8 @@ export default function TripDetailPage() {
 
         <TabsContent value="hotels">
           <div className="space-y-4">
-            {initialTrip.hotelOptions.length ? (
-              initialTrip.hotelOptions.map((hotel) => (
+            {trip.hotelOptions.length ? (
+              trip.hotelOptions.map((hotel) => (
                 <HotelOptionCard key={hotel.id} option={hotel} />
               ))
             ) : (
@@ -329,8 +418,8 @@ export default function TripDetailPage() {
 
         <TabsContent value="notes">
           <InternalNotesEditor
-            value={notes}
-            onChange={setNotes}
+            value={trip.notes ?? ""}
+            onChange={(value) => persistTrip({ ...trip, notes: value })}
             placeholder="Add internal workflow notes here."
             readOnly={isClosed}
           />

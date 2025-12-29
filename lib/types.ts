@@ -82,7 +82,9 @@ export interface Itinerary {
   id: string;
   tripId: string;
   generatedAt: string;
-  sections: string[];
+  optionAId: string;
+  backupOptionIds: string[];
+  notes?: string;
 }
 
 export interface ActivityItem {

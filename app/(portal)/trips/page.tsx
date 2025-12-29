@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import DataTable from "@/components/data-table";
 import StatusBadge from "@/components/common/StatusBadge";
 import { Input } from "@/components/ui/input";
-import { clients, trips, tripStatusOrder } from "@/lib/mock/data";
+import { tripStatusOrder } from "@/lib/mock/data";
+import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
 import type { Trip } from "@/lib/types";
 
 const statusOptions = ["All", ...tripStatusOrder] as const;
@@ -17,8 +18,19 @@ export default function TripsPage() {
   const [statusFilter, setStatusFilter] = useState<
     (typeof statusOptions)[number]
   >("All");
+  const [portalData, setPortalData] = useState<PortalData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const data = initializeFromMockIfEmpty();
+    setPortalData(data);
+    setIsLoading(false);
+  }, []);
 
   const filteredTrips = useMemo(() => {
+    const trips = portalData?.trips ?? [];
+    const clients = portalData?.clients ?? [];
+
     return trips.filter((trip) => {
       const client = clients.find((c) => c.id === trip.clientId);
       const matchesQuery =
@@ -27,7 +39,23 @@ export default function TripsPage() {
       const matchesStatus = statusFilter === "All" || trip.status === statusFilter;
       return matchesQuery && matchesStatus;
     });
-  }, [query, statusFilter]);
+  }, [portalData, query, statusFilter]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Trips"
+          description="Track active workflows and status-driven milestones."
+        />
+        <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
+          <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+          <div className="h-10 w-full animate-pulse rounded bg-slate-100" />
+          <div className="h-40 w-full animate-pulse rounded bg-slate-100" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -65,7 +93,9 @@ export default function TripsPage() {
             key: "client",
             header: "Client",
             render: (trip: Trip) => {
-              const client = clients.find((c) => c.id === trip.clientId);
+              const client = portalData?.clients.find(
+                (c) => c.id === trip.clientId
+              );
               return (
                 <div>
                   <p className="font-semibold text-slate-900">{client?.fullName}</p>
