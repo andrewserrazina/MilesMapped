@@ -129,7 +129,7 @@ export default function DashboardPage() {
               href="/clients/new"
               className={cn(buttonVariants(), "w-full justify-between")}
             >
-              Add a new client intake
+              + New Client
               <span aria-hidden>→</span>
             </Link>
             <Link
@@ -139,7 +139,7 @@ export default function DashboardPage() {
                 "w-full justify-between"
               )}
             >
-              Start a trip workflow
+              + New Trip
               <span aria-hidden>→</span>
             </Link>
             <Link
