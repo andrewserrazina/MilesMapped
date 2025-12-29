@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { ClientPreferences, Trip } from "@/lib/types";
+import { defaultTripIntake, type ClientPreferences, type Trip } from "@/lib/types";
 import { portalRepo } from "@/lib/portalRepo";
 
 const cabinOptions: ClientPreferences["cabinPref"][] = [
@@ -128,6 +128,7 @@ export default function NewTripPage() {
       cabinPref,
       status: "Intake",
       assignedAgentName: currentUserName,
+      intake: { ...defaultTripIntake },
       awardOptions: [],
       hotelOptions: [],
     };

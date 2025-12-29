@@ -13,10 +13,11 @@ import InternalNotesEditor from "@/components/internal-notes-editor";
 import EmptyState from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { tripStatusOrder } from "@/lib/mock/data";
 import { portalRepo } from "@/lib/portalRepo";
-import type { AwardOption, Itinerary, TripStatus } from "@/lib/types";
+import type { AwardOption, Itinerary, TripIntake, TripStatus } from "@/lib/types";
 
 const agentOptions = ["Admin", "Agent A", "Agent B"];
 
@@ -59,6 +60,24 @@ export default function TripDetailPage() {
   const hasPinnedOption = Boolean(pinnedOption);
   const isClosed = trip ? portalRepo.isTripReadOnly(trip) : false;
   const canGenerate = trip?.status === "Draft Ready" && hasPinnedOption;
+  const intakeItems: { key: keyof TripIntake; label: string }[] = [
+    { key: "travelerNamesCaptured", label: "Traveler names captured" },
+    { key: "preferredAirportsConfirmed", label: "Preferred airports confirmed" },
+    { key: "datesConfirmed", label: "Dates confirmed (or flexibility recorded)" },
+    { key: "cabinConfirmed", label: "Cabin preference confirmed" },
+    { key: "pointsReviewed", label: "Points balances reviewed" },
+    {
+      key: "docsChecked",
+      label: "Passport/visa constraints (international) checked",
+    },
+    { key: "budgetNotesAdded", label: "Budget notes added (cash/fees tolerance)" },
+  ];
+  const countCompletedIntake = (intake: TripIntake) =>
+    intakeItems.filter((item) => intake[item.key]).length;
+  const completedIntakeCount = trip ? countCompletedIntake(trip.intake) : 0;
+  const canMoveToSearching = completedIntakeCount >= 4;
+  const showIntakeChecklist =
+    trip?.status === "Intake" || trip?.status === "Searching";
 
   const generateHelperText =
     trip?.status !== "Draft Ready"
@@ -158,10 +177,20 @@ export default function TripDetailPage() {
         assignedAgentName={trip.assignedAgentName}
         agentOptions={agentOptions}
         onStatusChange={(nextStatus: TripStatus) =>
-          portalRepo.updateTrip(trip.id, (current) => ({
-            ...current,
-            status: nextStatus,
-          }))
+          portalRepo.updateTrip(trip.id, (current) => {
+            if (
+              current.status === "Intake" &&
+              nextStatus === "Searching" &&
+              countCompletedIntake(current.intake) < 4
+            ) {
+              return current;
+            }
+
+            return {
+              ...current,
+              status: nextStatus,
+            };
+          })
         }
         onAssignedAgentChange={(nextAgent) =>
           portalRepo.updateTrip(trip.id, (current) => ({
@@ -172,6 +201,14 @@ export default function TripDetailPage() {
         onGenerateItinerary={handleGenerateItinerary}
         generateDisabled={!canGenerate || isClosed}
         generateHelperText={generateHelperText}
+        statusOptionDisabled={(option) =>
+          trip.status === "Intake" && option === "Searching" && !canMoveToSearching
+        }
+        statusHelperText={
+          trip.status === "Intake" && !canMoveToSearching
+            ? "Complete at least 4 intake items to start searching."
+            : undefined
+        }
         isReadOnly={isClosed}
       />
 
@@ -186,7 +223,45 @@ export default function TripDetailPage() {
         </TabsList>
 
         <TabsContent value="overview">
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            {showIntakeChecklist ? (
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <CardTitle>Intake Checklist</CardTitle>
+                    <span className="text-sm text-slate-500">
+                      {completedIntakeCount}/{intakeItems.length} complete
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-slate-600">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {intakeItems.map((item) => (
+                      <label
+                        key={item.key}
+                        className="flex items-start gap-2 text-sm text-slate-700"
+                      >
+                        <Checkbox
+                          checked={trip.intake[item.key]}
+                          onChange={(event) =>
+                            portalRepo.updateTrip(trip.id, (current) => ({
+                              ...current,
+                              intake: {
+                                ...current.intake,
+                                [item.key]: event.target.checked,
+                              },
+                            }))
+                          }
+                          disabled={isClosed}
+                        />
+                        <span>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+            <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Trip Details</CardTitle>
@@ -291,6 +366,7 @@ export default function TripDetailPage() {
                 </div>
               </CardContent>
             </Card>
+            </div>
           </div>
         </TabsContent>
 

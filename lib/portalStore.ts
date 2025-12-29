@@ -4,6 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { clients, itineraries, trips } from "@/lib/mock/data";
 import { resetPortalStorage } from "@/lib/storage";
 import type { AwardOption, Client, Itinerary, Trip } from "@/lib/types";
+import { defaultTripIntake } from "@/lib/types";
 
 const STORAGE_KEY = "milesmapped.portalData";
 const SCHEMA_VERSION = 1;
@@ -88,12 +89,14 @@ function normalizeTrip(trip: Trip): Trip {
   const hasPinned =
     trip.pinnedAwardOptionId &&
     awardOptions.some((option) => option.id === trip.pinnedAwardOptionId);
+  const intake = { ...defaultTripIntake, ...trip.intake };
 
   return {
     ...trip,
     awardOptions,
     assignedAgentName: trip.assignedAgentName ?? "Admin",
     pinnedAwardOptionId: hasPinned ? trip.pinnedAwardOptionId : undefined,
+    intake,
   };
 }
 
@@ -142,6 +145,14 @@ function buildSampleTrips(availableClients: Client[]): Trip[] {
       status: "Searching",
       assignedAgentName: "Admin",
       notes: "Target ANA/JAL sweet spots and low-fuel-surcharge options.",
+      intake: {
+        ...defaultTripIntake,
+        travelerNamesCaptured: true,
+        preferredAirportsConfirmed: true,
+        datesConfirmed: true,
+        cabinConfirmed: true,
+        pointsReviewed: true,
+      },
       awardOptions: [
         {
           id: tripOneOptionOneId,
@@ -186,6 +197,16 @@ function buildSampleTrips(availableClients: Client[]): Trip[] {
       status: "Draft Ready",
       assignedAgentName: "Jordan Lee",
       notes: "Prioritize overnight outbound and coastal hotel points options.",
+      intake: {
+        ...defaultTripIntake,
+        travelerNamesCaptured: true,
+        preferredAirportsConfirmed: true,
+        datesConfirmed: true,
+        cabinConfirmed: true,
+        pointsReviewed: true,
+        docsChecked: true,
+        budgetNotesAdded: true,
+      },
       awardOptions: [
         {
           id: tripTwoOptionOneId,
@@ -229,6 +250,12 @@ function buildSampleTrips(availableClients: Client[]): Trip[] {
       status: "Intake",
       assignedAgentName: "Agent A",
       notes: "Needs strong Wi-Fi and flexible return routing via DPS.",
+      intake: {
+        ...defaultTripIntake,
+        travelerNamesCaptured: true,
+        preferredAirportsConfirmed: false,
+        datesConfirmed: true,
+      },
       awardOptions: [
         {
           id: tripThreeOptionOneId,

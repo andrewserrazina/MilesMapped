@@ -17,6 +17,8 @@ export default function TripHeader({
   onGenerateItinerary,
   generateDisabled,
   generateHelperText,
+  statusOptionDisabled,
+  statusHelperText,
   isReadOnly,
 }: {
   title: string;
@@ -29,6 +31,8 @@ export default function TripHeader({
   onGenerateItinerary: () => void;
   generateDisabled: boolean;
   generateHelperText?: string;
+  statusOptionDisabled?: (status: TripStatus) => boolean;
+  statusHelperText?: string;
   isReadOnly: boolean;
 }) {
   return (
@@ -55,11 +59,18 @@ export default function TripHeader({
               disabled={isReadOnly}
             >
               {statusOptions.map((item) => (
-                <option key={item} value={item}>
+                <option
+                  key={item}
+                  value={item}
+                  disabled={statusOptionDisabled?.(item)}
+                >
                   {item}
                 </option>
               ))}
             </select>
+            {statusHelperText ? (
+              <span className="text-xs text-slate-400">{statusHelperText}</span>
+            ) : null}
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-400">

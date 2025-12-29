@@ -59,6 +59,26 @@ export interface HotelOption {
   notes?: string;
 }
 
+export interface TripIntake {
+  travelerNamesCaptured: boolean;
+  preferredAirportsConfirmed: boolean;
+  datesConfirmed: boolean;
+  cabinConfirmed: boolean;
+  pointsReviewed: boolean;
+  docsChecked: boolean;
+  budgetNotesAdded: boolean;
+}
+
+export const defaultTripIntake: TripIntake = {
+  travelerNamesCaptured: false,
+  preferredAirportsConfirmed: false,
+  datesConfirmed: false,
+  cabinConfirmed: false,
+  pointsReviewed: false,
+  docsChecked: false,
+  budgetNotesAdded: false,
+};
+
 export interface Trip {
   id: string;
   clientId: string;
@@ -74,6 +94,7 @@ export interface Trip {
   status: TripStatus;
   assignedAgentName: string;
   notes?: string;
+  intake: TripIntake;
   awardOptions: AwardOption[];
   hotelOptions: HotelOption[];
   pinnedAwardOptionId?: string;
