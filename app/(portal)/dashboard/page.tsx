@@ -79,16 +79,16 @@ export default function DashboardPage() {
         actions={
           <div className="flex items-center gap-2">
             <Link
-              href="/clients"
+              href="/clients/new"
               className={cn(buttonVariants({ variant: "outline" }))}
             >
-              New Client
+              + New Client
             </Link>
             <Link
-              href="/trips"
+              href="/trips/new"
               className={cn(buttonVariants({ variant: "outline" }))}
             >
-              New Trip
+              + New Trip
             </Link>
             <Link href="/award-search" className={cn(buttonVariants({}))}>
               Award Search
@@ -130,14 +130,14 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <Link
-              href="/clients"
+              href="/clients/new"
               className={cn(buttonVariants(), "w-full justify-between")}
             >
               Add a new client intake
               <span aria-hidden>→</span>
             </Link>
             <Link
-              href="/trips"
+              href="/trips/new"
               className={cn(
                 buttonVariants({ variant: "secondary" }),
                 "w-full justify-between"
