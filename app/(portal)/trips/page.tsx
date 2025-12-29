@@ -15,6 +15,8 @@ import { usePortalData } from "@/lib/portalStore";
 import { cn } from "@/lib/utils";
 
 const statusOptions = ["All", ...tripStatusOrder] as const;
+const assignmentFilters = ["All Trips", "My Trips"] as const;
+const currentUserName = "Admin";
 
 export default function TripsPage() {
   const router = useRouter();
@@ -22,6 +24,9 @@ export default function TripsPage() {
   const [statusFilter, setStatusFilter] = useState<
     (typeof statusOptions)[number]
   >("All");
+  const [assignmentFilter, setAssignmentFilter] = useState<
+    (typeof assignmentFilters)[number]
+  >("All Trips");
   const { data: portalData, isHydrated } = usePortalData();
 
   const filteredTrips = useMemo(() => {
@@ -34,11 +39,17 @@ export default function TripsPage() {
         trip.title.toLowerCase().includes(query.toLowerCase()) ||
         client?.fullName.toLowerCase().includes(query.toLowerCase());
       const matchesStatus = statusFilter === "All" || trip.status === statusFilter;
-      return matchesQuery && matchesStatus;
+      const matchesAssignment =
+        assignmentFilter === "All Trips" ||
+        trip.assignedAgentName === currentUserName;
+      return matchesQuery && matchesStatus && matchesAssignment;
     });
-  }, [portalData, query, statusFilter]);
+  }, [portalData, query, statusFilter, assignmentFilter]);
 
-  const hasFilters = query.length > 0 || statusFilter !== "All";
+  const hasFilters =
+    query.length > 0 ||
+    statusFilter !== "All" ||
+    assignmentFilter !== "All Trips";
 
   if (!isHydrated) {
     return (
@@ -79,6 +90,26 @@ export default function TripsPage() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
+        <div className="inline-flex items-center rounded-md border border-slate-200 bg-white p-1">
+          {assignmentFilters.map((filter) => {
+            const isActive = assignmentFilter === filter;
+            return (
+              <button
+                key={filter}
+                type="button"
+                className={cn(
+                  buttonVariants({
+                    variant: isActive ? "secondary" : "ghost",
+                    size: "sm",
+                  })
+                )}
+                onClick={() => setAssignmentFilter(filter)}
+              >
+                {filter}
+              </button>
+            );
+          })}
+        </div>
         <select
           className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
           value={statusFilter}
@@ -103,6 +134,7 @@ export default function TripsPage() {
               ? () => {
                   setQuery("");
                   setStatusFilter("All");
+                  setAssignmentFilter("All Trips");
                 }
               : undefined
           }
