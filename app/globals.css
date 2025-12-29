@@ -32,6 +32,24 @@ body {
   h3,
   h4 {
     color: #0f172a;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
+  }
+
+  nav,
+  aside,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea {
+    display: none !important;
   }
 
   .print-hidden {
@@ -49,5 +67,9 @@ body {
   .print-avoid-break {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  main {
+    padding: 0 !important;
   }
 }
