@@ -1,21 +1,64 @@
 "use client";
 
-import type { Client, Trip } from "@/lib/types";
-import { addClient, addTrip, updateClient, updateTrip } from "@/lib/portalStore";
+import type { AwardOption, Client, Itinerary, Trip } from "@/lib/types";
+import {
+  addAwardOption,
+  addClient,
+  addItinerary,
+  addTrip,
+  isTripReadOnly,
+  removeAwardOption,
+  setPinnedAwardOption,
+  updateAwardOption,
+  updateClient,
+  updateTrip,
+  usePortalData,
+  type PortalData,
+} from "@/lib/portalStore";
 
+// Supabase replacement notes:
+// - Replace reads that call list/get helpers with SELECT queries against the
+//   clients, trips, and itineraries tables.
+// - Replace writes that call create/update helpers with INSERT/UPDATE queries,
+//   instead of localStorage-backed portalStore mutations.
 export const portalRepo = {
+  // Table mapping: clients table → listClients/getClient/createClient/updateClient.
+  listClients: (data?: PortalData | null) => data?.clients ?? [],
+  getClient: (data: PortalData | null | undefined, id: string) =>
+    data?.clients.find((client) => client.id === id) ?? null,
   createClient: (client: Client) => {
     addClient(client);
     return client;
   },
+  updateClient: (clientId: string, updater: (client: Client) => Client) => {
+    updateClient(clientId, updater);
+  },
+
+  // Table mapping: trips table → listTrips/getTrip/createTrip/updateTrip.
+  listTrips: (data?: PortalData | null) => data?.trips ?? [],
+  getTrip: (data: PortalData | null | undefined, id: string) =>
+    data?.trips.find((trip) => trip.id === id) ?? null,
   createTrip: (trip: Trip) => {
     addTrip(trip);
     return trip;
   },
-  updateClient: (clientId: string, updater: (client: Client) => Client) => {
-    updateClient(clientId, updater);
-  },
   updateTrip: (tripId: string, updater: (trip: Trip) => Trip) => {
     updateTrip(tripId, updater);
   },
+
+  // Table mapping: itineraries table → listItineraries/getItinerary/createItinerary.
+  listItineraries: (data?: PortalData | null) => data?.itineraries ?? [],
+  getItinerary: (data: PortalData | null | undefined, id: string) =>
+    data?.itineraries.find((itinerary) => itinerary.id === id) ?? null,
+  createItinerary: (itinerary: Itinerary) => {
+    addItinerary(itinerary);
+    return itinerary;
+  },
+
+  usePortalData,
+  isTripReadOnly,
+  addAwardOption,
+  updateAwardOption,
+  removeAwardOption,
+  setPinnedAwardOption,
 };

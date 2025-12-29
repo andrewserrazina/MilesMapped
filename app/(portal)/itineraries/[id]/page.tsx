@@ -7,17 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AwardOption } from "@/lib/types";
-import { usePortalData } from "@/lib/portalStore";
+import { portalRepo } from "@/lib/portalRepo";
 
 export default function ItineraryDetailPage() {
   const params = useParams<{ id: string }>();
-  const { data: portalData, isHydrated } = usePortalData();
+  const { data: portalData, isHydrated } = portalRepo.usePortalData();
 
-  const itinerary = portalData?.itineraries.find(
-    (item) => item.id === params.id
-  );
-  const trip = portalData?.trips.find((item) => item.id === itinerary?.tripId);
-  const client = portalData?.clients.find((item) => item.id === trip?.clientId);
+  const itinerary = portalRepo.getItinerary(portalData, params.id);
+  const trip = itinerary
+    ? portalRepo.getTrip(portalData, itinerary.tripId)
+    : null;
+  const client = trip ? portalRepo.getClient(portalData, trip.clientId) : null;
 
   const optionA = useMemo(() => {
     if (!trip || !itinerary) {

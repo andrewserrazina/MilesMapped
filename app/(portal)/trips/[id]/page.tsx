@@ -15,16 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { tripStatusOrder } from "@/lib/mock/data";
-import {
-  addAwardOption,
-  addItinerary,
-  isTripReadOnly,
-  removeAwardOption,
-  setPinnedAwardOption,
-  updateAwardOption,
-  updateTrip,
-  usePortalData,
-} from "@/lib/portalStore";
 import { portalRepo } from "@/lib/portalRepo";
 import type { AwardOption, Itinerary, TripStatus } from "@/lib/types";
 
@@ -33,7 +23,7 @@ const agentOptions = ["Admin", "Agent A", "Agent B"];
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: portalData, isHydrated } = usePortalData();
+  const { data: portalData, isHydrated } = portalRepo.usePortalData();
   const [awardModalState, setAwardModalState] = useState<{
     open: boolean;
     mode: "add" | "edit";
@@ -41,13 +31,12 @@ export default function TripDetailPage() {
   }>({ open: false, mode: "add", option: null });
 
   const trip = useMemo(
-    () => portalData.trips.find((item) => item.id === params.id) ?? null,
-    [params.id, portalData.trips]
+    () => portalRepo.getTrip(portalData, params.id),
+    [params.id, portalData]
   );
   const client = useMemo(
-    () =>
-      portalData.clients.find((item) => item.id === trip?.clientId) ?? null,
-    [portalData.clients, trip?.clientId]
+    () => (trip ? portalRepo.getClient(portalData, trip.clientId) : null),
+    [portalData, trip]
   );
 
   const pinnedOption = trip?.awardOptions.find(
@@ -68,7 +57,7 @@ export default function TripDetailPage() {
   }, [trip, pinnedOption]);
 
   const hasPinnedOption = Boolean(pinnedOption);
-  const isClosed = trip ? isTripReadOnly(trip) : false;
+  const isClosed = trip ? portalRepo.isTripReadOnly(trip) : false;
   const canGenerate = trip?.status === "Draft Ready" && hasPinnedOption;
 
   const generateHelperText =
@@ -118,9 +107,9 @@ export default function TripDetailPage() {
         badges: values.badges,
         createdAt: new Date().toISOString(),
       };
-      addAwardOption(trip.id, created);
+      portalRepo.addAwardOption(trip.id, created);
     } else if (awardModalState.option) {
-      updateAwardOption(trip.id, awardModalState.option.id, {
+      portalRepo.updateAwardOption(trip.id, awardModalState.option.id, {
         program: values.program,
         route: values.route,
         milesRequired: values.milesRequired,
@@ -135,7 +124,7 @@ export default function TripDetailPage() {
 
   const handleRemoveAwardOption = (option: AwardOption) => {
     if (window.confirm("Remove this award option?")) {
-      removeAwardOption(trip.id, option.id);
+      portalRepo.removeAwardOption(trip.id, option.id);
     }
   };
 
@@ -156,7 +145,7 @@ export default function TripDetailPage() {
       backupOptionIds: backupOptions.map((option) => option.id),
     };
 
-    addItinerary(newItinerary);
+    portalRepo.createItinerary(newItinerary);
     router.push(`/itineraries/${newItinerary.id}`);
   };
 
@@ -169,7 +158,10 @@ export default function TripDetailPage() {
         assignedAgentName={trip.assignedAgentName}
         agentOptions={agentOptions}
         onStatusChange={(nextStatus: TripStatus) =>
-          updateTrip(trip.id, (current) => ({ ...current, status: nextStatus }))
+          portalRepo.updateTrip(trip.id, (current) => ({
+            ...current,
+            status: nextStatus,
+          }))
         }
         onAssignedAgentChange={(nextAgent) =>
           portalRepo.updateTrip(trip.id, (current) => ({
@@ -329,7 +321,7 @@ export default function TripDetailPage() {
                       option={option}
                       isPinned={isPinned}
                       isReadOnly={isClosed}
-                      onPin={() => setPinnedAwardOption(trip.id, option.id)}
+                      onPin={() => portalRepo.setPinnedAwardOption(trip.id, option.id)}
                       onEdit={() =>
                         setAwardModalState({
                           open: true,
@@ -381,7 +373,10 @@ export default function TripDetailPage() {
           <InternalNotesEditor
             value={trip.notes ?? ""}
             onChange={(value) =>
-              updateTrip(trip.id, (current) => ({ ...current, notes: value }))
+              portalRepo.updateTrip(trip.id, (current) => ({
+                ...current,
+                notes: value,
+              }))
             }
             placeholder="Add internal workflow notes here."
             readOnly={isClosed}

@@ -17,7 +17,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ClientPreferences, Trip } from "@/lib/types";
 import { portalRepo } from "@/lib/portalRepo";
-import { usePortalData } from "@/lib/portalStore";
 
 const cabinOptions: ClientPreferences["cabinPref"][] = [
   "Economy",
@@ -29,8 +28,8 @@ const currentUserName = "Admin";
 
 export default function NewTripPage() {
   const router = useRouter();
-  const { data: portalData, isHydrated } = usePortalData();
-  const clients = portalData?.clients ?? [];
+  const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const clients = portalRepo.listClients(portalData);
 
   const [clientSearch, setClientSearch] = useState("");
   const [clientId, setClientId] = useState("");

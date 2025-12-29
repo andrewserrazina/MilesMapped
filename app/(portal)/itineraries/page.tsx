@@ -15,19 +15,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { usePortalData } from "@/lib/portalStore";
+import { portalRepo } from "@/lib/portalRepo";
 
 export default function ItinerariesPage() {
-  const { data: portalData, isHydrated } = usePortalData();
+  const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const itinerariesData = portalRepo.listItineraries(portalData);
 
   const itineraries = useMemo(() => {
-    if (!portalData) {
-      return [];
-    }
-    return [...portalData.itineraries].sort(
+    return [...itinerariesData].sort(
       (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime()
     );
-  }, [portalData]);
+  }, [itinerariesData]);
 
   if (!isHydrated) {
     return (
@@ -71,12 +69,10 @@ export default function ItinerariesPage() {
               </TableHeader>
               <TableBody>
                 {itineraries.map((itinerary) => {
-                  const trip = portalData?.trips.find(
-                    (item) => item.id === itinerary.tripId
-                  );
-                  const client = portalData?.clients.find(
-                    (item) => item.id === trip?.clientId
-                  );
+                  const trip = portalRepo.getTrip(portalData, itinerary.tripId);
+                  const client = trip
+                    ? portalRepo.getClient(portalData, trip.clientId)
+                    : null;
 
                   return (
                     <TableRow key={itinerary.id}>

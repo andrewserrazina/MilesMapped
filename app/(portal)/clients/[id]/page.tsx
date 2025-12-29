@@ -7,24 +7,24 @@ import PageHeader from "@/components/page-header";
 import Tabs from "@/components/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Client, Trip } from "@/lib/types";
-import { usePortalData } from "@/lib/portalStore";
+import type { Trip } from "@/lib/types";
+import { portalRepo } from "@/lib/portalRepo";
 
 export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
-  const { data: portalData, isHydrated } = usePortalData();
+  const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const tripsData = portalRepo.listTrips(portalData);
   const [notes, setNotes] = useState(
     "Meeting notes and client-specific follow-ups live here."
   );
 
   const client = useMemo(
-    () => portalData?.clients.find((item) => item.id === params.id) ?? null,
+    () => portalRepo.getClient(portalData, params.id),
     [params.id, portalData]
   );
   const trips = useMemo<Trip[]>(
-    () =>
-      portalData?.trips.filter((trip) => trip.clientId === client?.id) ?? [],
-    [client, portalData]
+    () => tripsData.filter((trip) => trip.clientId === client?.id),
+    [client?.id, tripsData]
   );
 
   if (!isHydrated) {

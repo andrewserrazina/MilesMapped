@@ -4,33 +4,35 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import SidebarNav from "@/components/sidebar-nav";
 import { Input } from "@/components/ui/input";
-import { usePortalData } from "@/lib/portalStore";
+import { portalRepo } from "@/lib/portalRepo";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { data: portalData } = usePortalData();
+  const { data: portalData } = portalRepo.usePortalData();
+  const clients = portalRepo.listClients(portalData);
+  const trips = portalRepo.listTrips(portalData);
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
 
   const clientResults = useMemo(() => {
-    if (!normalizedQuery || !portalData) {
+    if (!normalizedQuery) {
       return [];
     }
 
-    return portalData.clients.filter((client) => {
+    return clients.filter((client) => {
       return (
         client.fullName.toLowerCase().includes(normalizedQuery) ||
         client.email.toLowerCase().includes(normalizedQuery)
       );
     });
-  }, [normalizedQuery, portalData]);
+  }, [clients, normalizedQuery]);
 
   const tripResults = useMemo(() => {
-    if (!normalizedQuery || !portalData) {
+    if (!normalizedQuery) {
       return [];
     }
 
-    return portalData.trips.filter((trip) => {
-      const client = portalData.clients.find((item) => item.id === trip.clientId);
+    return trips.filter((trip) => {
+      const client = portalRepo.getClient(portalData, trip.clientId);
       const route = `${trip.origin} ${trip.destination}`.toLowerCase();
       return (
         trip.title.toLowerCase().includes(normalizedQuery) ||
@@ -38,7 +40,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         client?.fullName.toLowerCase().includes(normalizedQuery)
       );
     });
-  }, [normalizedQuery, portalData]);
+  }, [normalizedQuery, portalData, trips]);
 
   const showResults = normalizedQuery.length > 0;
 
@@ -104,9 +106,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="max-h-64 overflow-y-auto">
                     {tripResults.length ? (
                       tripResults.map((trip) => {
-                        const client = portalData?.clients.find(
-                          (item) => item.id === trip.clientId
-                        );
+                        const client = portalRepo.getClient(portalData, trip.clientId);
                         return (
                           <Link
                             key={trip.id}

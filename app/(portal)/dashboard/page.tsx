@@ -9,17 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { usePortalData } from "@/lib/portalStore";
+import { portalRepo } from "@/lib/portalRepo";
 
 const currentUserName = "Admin";
 
 export default function DashboardPage() {
-  const { data: portalData, isHydrated } = usePortalData();
+  const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const clients = portalRepo.listClients(portalData);
+  const trips = portalRepo.listTrips(portalData);
 
   const kpis = useMemo(() => {
-    const clients = portalData?.clients ?? [];
-    const trips = portalData?.trips ?? [];
-
     return [
       {
         label: "Active Clients",
@@ -43,7 +42,7 @@ export default function DashboardPage() {
       { label: "Revenue MTD", value: "$18.4k" },
       { label: "Pending Followups", value: "6" },
     ];
-  }, [portalData]);
+  }, [clients, trips]);
 
   if (!isHydrated) {
     return (
