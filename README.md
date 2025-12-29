@@ -1,11 +1,50 @@
 # MilesMapped – Points & Miles Agent Portal
 
-## Getting Started
+MilesMapped is a Next.js + Tailwind Agent Portal for points & miles workflows.
+
+## Requirements
+
+- **Node.js 20.x** (recommended: 20 LTS)
+- npm (ships with Node)
+
+## Local Setup
 
 ```bash
 npm install
+```
+
+## Run Locally
+
+```bash
 npm run dev
 ```
+
+Then open [http://localhost:3000](http://localhost:3000).
+
+## Build for Production
+
+```bash
+npm run build
+npm run start
+```
+
+## Deploy to Vercel
+
+1. Push this repo to GitHub/GitLab/Bitbucket.
+2. In Vercel, click **Add New → Project** and import the repo.
+3. Keep the default build settings:
+   - Framework Preset: **Next.js**
+   - Build Command: `npm run build`
+   - Output Directory: `.next`
+4. Click **Deploy**.
+
+## Scripts
+
+- `npm run dev` – start the dev server
+- `npm run build` – create a production build
+- `npm run start` – run the production server
+- `npm run lint` – run ESLint
+- `npm run typecheck` – run TypeScript without emitting output
 
 ## Portal Routes
 
@@ -40,6 +79,19 @@ Trip lifecycle is status-driven:
   - At least 1 award option exists
   - A pinned award option is selected
   - Status is **Draft Ready**
+
+## Troubleshooting
+
+- **Tailwind styles not applying**
+  - Confirm `app/globals.css` is imported in `app/layout.tsx`.
+  - Ensure `tailwind.config.ts` content paths include `app/`, `components/`, and `lib/`.
+- **shadcn/ui components not found**
+  - Check `components.json` and `components/ui/*` for the needed components.
+- **Type errors during build**
+  - Run `npm run typecheck` to validate local TypeScript errors.
+- **Vercel build fails**
+  - Verify the repo includes `package.json`, `tsconfig.json`, and `next.config.mjs` at the root.
+  - Ensure build does not rely on local-only files or environment variables.
 
 ## Extending the Portal
 
