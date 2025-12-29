@@ -17,6 +17,7 @@ type AwardOptionFormValues = {
   route: string;
   milesRequired: string;
   feesUSD: string;
+  cashEquivalentUSD: string;
   transferRequired: boolean;
   transferTime: AwardOption["transferTime"];
   badges: string;
@@ -27,6 +28,7 @@ export type AwardOptionFormOutput = {
   route: string;
   milesRequired: number;
   feesUSD: number;
+  cashEquivalentUSD?: number;
   transferRequired: boolean;
   transferTime: AwardOption["transferTime"];
   badges: string[];
@@ -37,6 +39,7 @@ const emptyValues: AwardOptionFormValues = {
   route: "",
   milesRequired: "",
   feesUSD: "",
+  cashEquivalentUSD: "",
   transferRequired: true,
   transferTime: "Instant",
   badges: "",
@@ -70,6 +73,10 @@ export default function AwardOptionModal({
         route: initialValues.route,
         milesRequired: String(initialValues.milesRequired),
         feesUSD: String(initialValues.feesUSD),
+        cashEquivalentUSD:
+          initialValues.cashEquivalentUSD === undefined
+            ? ""
+            : String(initialValues.cashEquivalentUSD),
         transferRequired: initialValues.transferRequired,
         transferTime: initialValues.transferTime,
         badges: initialValues.badges?.join(", ") ?? "",
@@ -96,6 +103,15 @@ export default function AwardOptionModal({
     if (Number.isNaN(feesValue) || feesValue < 0) {
       nextErrors.feesUSD = "Fees must be 0 or more.";
     }
+    const cashEquivalentValue = values.cashEquivalentUSD.trim()
+      ? Number(values.cashEquivalentUSD)
+      : undefined;
+    if (
+      cashEquivalentValue !== undefined &&
+      (Number.isNaN(cashEquivalentValue) || cashEquivalentValue < 0)
+    ) {
+      nextErrors.cashEquivalentUSD = "Cash equivalent must be 0 or more.";
+    }
 
     setErrors(nextErrors);
 
@@ -108,6 +124,7 @@ export default function AwardOptionModal({
       route: values.route.trim(),
       milesRequired: milesValue,
       feesUSD: feesValue,
+      cashEquivalentUSD: cashEquivalentValue,
       transferRequired: values.transferRequired,
       transferTime: values.transferTime,
       badges: values.badges
@@ -198,6 +215,24 @@ export default function AwardOptionModal({
             />
             {errors.feesUSD ? (
               <p className="text-xs text-red-500">{errors.feesUSD}</p>
+            ) : null}
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Cash Equivalent (USD)
+            </label>
+            <Input
+              type="number"
+              value={values.cashEquivalentUSD}
+              onChange={(event) =>
+                setValues((prev) => ({
+                  ...prev,
+                  cashEquivalentUSD: event.target.value,
+                }))
+              }
+            />
+            {errors.cashEquivalentUSD ? (
+              <p className="text-xs text-red-500">{errors.cashEquivalentUSD}</p>
             ) : null}
           </div>
           <div className="space-y-2">
