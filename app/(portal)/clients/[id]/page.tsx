@@ -1,28 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import Tabs from "@/components/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
 import type { Client, Trip } from "@/lib/types";
+import { usePortalData } from "@/lib/portalStore";
 
 export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
-  const [portalData, setPortalData] = useState<PortalData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: portalData, isHydrated } = usePortalData();
   const [notes, setNotes] = useState(
     "Meeting notes and client-specific follow-ups live here."
   );
-
-  useEffect(() => {
-    const data = initializeFromMockIfEmpty();
-    setPortalData(data);
-    setIsLoading(false);
-  }, []);
 
   const client = useMemo(
     () => portalData?.clients.find((item) => item.id === params.id) ?? null,
@@ -34,7 +27,7 @@ export default function ClientDetailPage() {
     [client, portalData]
   );
 
-  if (isLoading) {
+  if (!isHydrated) {
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-slate-200 bg-white p-6">

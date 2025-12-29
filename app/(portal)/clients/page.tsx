@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import DataTable from "@/components/data-table";
 import { Input } from "@/components/ui/input";
-import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
 import type { Client } from "@/lib/types";
+import { usePortalData } from "@/lib/portalStore";
 
 const statusOptions: Array<Client["status"] | "All"> = [
   "All",
@@ -19,14 +19,7 @@ export default function ClientsPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<(typeof statusOptions)[number]>("All");
-  const [portalData, setPortalData] = useState<PortalData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const data = initializeFromMockIfEmpty();
-    setPortalData(data);
-    setIsLoading(false);
-  }, []);
+  const { data: portalData, isHydrated } = usePortalData();
 
   const filteredClients = useMemo(() => {
     const clients = portalData?.clients ?? [];
@@ -39,7 +32,7 @@ export default function ClientsPage() {
     });
   }, [portalData, query, statusFilter]);
 
-  if (isLoading) {
+  if (!isHydrated) {
     return (
       <div className="space-y-6">
         <PageHeader

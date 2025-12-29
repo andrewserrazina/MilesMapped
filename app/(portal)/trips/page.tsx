@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import DataTable from "@/components/data-table";
 import StatusBadge from "@/components/common/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { tripStatusOrder } from "@/lib/mock/data";
-import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
 import type { Trip } from "@/lib/types";
+import { usePortalData } from "@/lib/portalStore";
 
 const statusOptions = ["All", ...tripStatusOrder] as const;
 
@@ -18,14 +18,7 @@ export default function TripsPage() {
   const [statusFilter, setStatusFilter] = useState<
     (typeof statusOptions)[number]
   >("All");
-  const [portalData, setPortalData] = useState<PortalData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const data = initializeFromMockIfEmpty();
-    setPortalData(data);
-    setIsLoading(false);
-  }, []);
+  const { data: portalData, isHydrated } = usePortalData();
 
   const filteredTrips = useMemo(() => {
     const trips = portalData?.trips ?? [];
@@ -41,7 +34,7 @@ export default function TripsPage() {
     });
   }, [portalData, query, statusFilter]);
 
-  if (isLoading) {
+  if (!isHydrated) {
     return (
       <div className="space-y-6">
         <PageHeader

@@ -1,24 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { initializeFromMockIfEmpty, type PortalData } from "@/lib/storage";
 import type { AwardOption } from "@/lib/types";
+import { usePortalData } from "@/lib/portalStore";
 
 export default function ItineraryDetailPage() {
   const params = useParams<{ id: string }>();
-  const [portalData, setPortalData] = useState<PortalData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const data = initializeFromMockIfEmpty();
-    setPortalData(data);
-    setIsLoading(false);
-  }, []);
+  const { data: portalData, isHydrated } = usePortalData();
 
   const itinerary = portalData?.itineraries.find(
     (item) => item.id === params.id
@@ -64,7 +57,7 @@ export default function ItineraryDetailPage() {
     ];
   }, [optionA]);
 
-  if (isLoading) {
+  if (!isHydrated) {
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-slate-200 bg-white p-6">
