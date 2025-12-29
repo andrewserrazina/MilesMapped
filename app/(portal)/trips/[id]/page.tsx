@@ -11,10 +11,12 @@ import TripNextStepBanner from "@/components/trips/TripNextStepBanner";
 import HotelOptionCard from "@/components/hotel-option-card";
 import InternalNotesEditor from "@/components/internal-notes-editor";
 import EmptyState from "@/components/common/EmptyState";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { buildAwardSearchUrl } from "@/lib/awardSearchLinks";
 import { tripStatusOrder } from "@/lib/mock/data";
 import { portalRepo } from "@/lib/portalRepo";
 import type { AwardOption, Itinerary, TripIntake, TripStatus } from "@/lib/types";
@@ -33,6 +35,14 @@ export default function TripDetailPage() {
     mode: "add" | "edit";
     option: AwardOption | null;
   }>({ open: false, mode: "add", option: null });
+  const [awardSearchMessage, setAwardSearchMessage] = useState<{
+    type: "success" | "blocked";
+    providerLabel: string;
+    url: string;
+  } | null>(null);
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">(
+    "idle"
+  );
 
   const trip = useMemo(
     () => portalRepo.getTrip(portalData, params.id),
@@ -101,6 +111,11 @@ export default function TripDetailPage() {
   const hasPinnedOption = Boolean(pinnedOption);
   const isClosed = trip ? portalRepo.isTripReadOnly(trip) : false;
   const canGenerate = trip?.status === "Draft Ready" && hasPinnedOption;
+  const awardSearchIntegrations =
+    portalRepo.getAwardSearchIntegrations(portalData);
+  const showPointMe = Boolean(awardSearchIntegrations?.pointMe.enabled);
+  const showRoame = Boolean(awardSearchIntegrations?.roame.enabled);
+  const hasAwardSearchButtons = showPointMe || showRoame;
   const intakeItems: { key: keyof TripIntake; label: string }[] = [
     { key: "travelerNamesCaptured", label: "Traveler names captured" },
     { key: "preferredAirportsConfirmed", label: "Preferred airports confirmed" },
@@ -211,6 +226,38 @@ export default function TripDetailPage() {
     router.push(`/itineraries/${newItinerary.id}`);
   };
 
+  const handleAwardSearch = (providerKey: "pointMe" | "roame") => {
+    if (!trip || !awardSearchIntegrations) {
+      return;
+    }
+
+    const providerConfig = awardSearchIntegrations[providerKey];
+    const providerLabel = providerKey === "pointMe" ? "point.me" : "Roame";
+    const url = buildAwardSearchUrl(providerConfig, trip);
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+
+    setCopyStatus("idle");
+    setAwardSearchMessage({
+      type: opened ? "success" : "blocked",
+      providerLabel,
+      url,
+    });
+  };
+
+  const handleCopyLink = async () => {
+    if (!awardSearchMessage) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(awardSearchMessage.url);
+      setCopyStatus("copied");
+    } catch (error) {
+      console.error("Failed to copy award search URL", error);
+      setCopyStatus("error");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <TripHeader
@@ -253,7 +300,68 @@ export default function TripDetailPage() {
             : undefined
         }
         isReadOnly={isClosed}
+        actionButtons={
+          awardSearchIntegrations && hasAwardSearchButtons ? (
+            <>
+              {showPointMe ? (
+                <Button
+                  variant="outline"
+                  onClick={() => handleAwardSearch("pointMe")}
+                >
+                  Search point.me
+                </Button>
+              ) : null}
+              {showRoame ? (
+                <Button
+                  variant="outline"
+                  onClick={() => handleAwardSearch("roame")}
+                >
+                  Search Roame
+                </Button>
+              ) : null}
+            </>
+          ) : null
+        }
       />
+
+      {awardSearchMessage ? (
+        <Alert>
+          <AlertTitle>
+            {awardSearchMessage.type === "success"
+              ? `Opened ${awardSearchMessage.providerLabel}`
+              : `Popup blocked for ${awardSearchMessage.providerLabel}`}
+          </AlertTitle>
+          <AlertDescription>
+            {awardSearchMessage.type === "success" ? (
+              <span>{`Opened ${awardSearchMessage.providerLabel} in a new tab.`}</span>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600">
+                  Use the link below if your browser blocked the popup.
+                </p>
+                <div className="rounded-md bg-slate-50 p-3 text-xs text-slate-700">
+                  <span className="break-all">{awardSearchMessage.url}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                    Copy link
+                  </Button>
+                  {copyStatus === "copied" ? (
+                    <span className="text-xs text-slate-500">
+                      Link copied.
+                    </span>
+                  ) : null}
+                  {copyStatus === "error" ? (
+                    <span className="text-xs text-red-500">
+                      Copy failed. Please copy manually.
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            )}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <TripNextStepBanner status={trip.status} />
 

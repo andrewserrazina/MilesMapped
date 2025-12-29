@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import StatusBadge from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ export default function TripHeader({
   statusOptionDisabled,
   statusHelperText,
   isReadOnly,
+  actionButtons,
 }: {
   title: string;
   status: TripStatus;
@@ -34,6 +36,7 @@ export default function TripHeader({
   statusOptionDisabled?: (status: TripStatus) => boolean;
   statusHelperText?: string;
   isReadOnly: boolean;
+  actionButtons?: ReactNode;
 }) {
   return (
     <div className="space-y-4">
@@ -48,6 +51,14 @@ export default function TripHeader({
           </div>
         </div>
         <div className="flex flex-wrap items-end gap-3">
+          {actionButtons ? (
+            <div className="flex flex-col items-start gap-2">
+              <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                Award Search
+              </label>
+              <div className="flex flex-wrap gap-2">{actionButtons}</div>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-400">
               Change Status

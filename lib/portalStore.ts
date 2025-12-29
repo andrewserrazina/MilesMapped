@@ -3,7 +3,13 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { clients, itineraries, trips } from "@/lib/mock/data";
 import { resetPortalStorage } from "@/lib/storage";
-import type { AwardOption, Client, Itinerary, Trip } from "@/lib/types";
+import type {
+  AwardOption,
+  AwardSearchIntegrationsSettings,
+  Client,
+  Itinerary,
+  Trip,
+} from "@/lib/types";
 import { defaultTripIntake } from "@/lib/types";
 
 const STORAGE_KEY = "milesmapped.portalData";
@@ -14,13 +20,28 @@ export interface PortalData {
   clients: typeof clients;
   trips: Trip[];
   itineraries: Itinerary[];
+  awardSearchIntegrations: AwardSearchIntegrationsSettings;
 }
+
+const defaultAwardSearchIntegrations: AwardSearchIntegrationsSettings = {
+  pointMe: {
+    enabled: true,
+    baseUrl: "https://www.point.me",
+    urlTemplate: "",
+  },
+  roame: {
+    enabled: true,
+    baseUrl: "https://roame.travel",
+    urlTemplate: "",
+  },
+};
 
 const defaultPortalData: PortalData = {
   schemaVersion: SCHEMA_VERSION,
   clients,
   trips,
   itineraries,
+  awardSearchIntegrations: defaultAwardSearchIntegrations,
 };
 
 let portalDataState: PortalData = defaultPortalData;
@@ -105,6 +126,16 @@ function normalizePortalData(data: PortalData): PortalData {
     ...data,
     schemaVersion: SCHEMA_VERSION,
     trips: data.trips.map((trip) => normalizeTrip(trip)),
+    awardSearchIntegrations: {
+      pointMe: {
+        ...defaultAwardSearchIntegrations.pointMe,
+        ...data.awardSearchIntegrations?.pointMe,
+      },
+      roame: {
+        ...defaultAwardSearchIntegrations.roame,
+        ...data.awardSearchIntegrations?.roame,
+      },
+    },
   };
 }
 
@@ -451,5 +482,29 @@ export function addTrip(trip: Trip) {
   setPortalData((previous) => ({
     ...previous,
     trips: [normalizeTrip(trip), ...previous.trips],
+  }));
+}
+
+type AwardSearchIntegrationsPatch = Partial<{
+  pointMe: Partial<AwardSearchIntegrationsSettings["pointMe"]>;
+  roame: Partial<AwardSearchIntegrationsSettings["roame"]>;
+}>;
+
+export function updateAwardSearchIntegrations(
+  patch: AwardSearchIntegrationsPatch
+) {
+  setPortalData((previous) => ({
+    ...previous,
+    awardSearchIntegrations: {
+      ...previous.awardSearchIntegrations,
+      pointMe: {
+        ...previous.awardSearchIntegrations.pointMe,
+        ...patch.pointMe,
+      },
+      roame: {
+        ...previous.awardSearchIntegrations.roame,
+        ...patch.roame,
+      },
+    },
   }));
 }
