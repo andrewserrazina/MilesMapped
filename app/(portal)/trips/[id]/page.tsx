@@ -1,30 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import PageHeader from "@/components/page-header";
-import Tabs from "@/components/tabs";
-import AwardOptionCard from "@/components/award-option-card";
+import AwardOptionCard from "@/components/trips/AwardOptionCard";
+import AwardOptionModal, {
+  type AwardOptionFormOutput,
+} from "@/components/trips/AwardOptionModal";
+import TripHeader from "@/components/trips/TripHeader";
+import TripNextStepBanner from "@/components/trips/TripNextStepBanner";
 import HotelOptionCard from "@/components/hotel-option-card";
 import InternalNotesEditor from "@/components/internal-notes-editor";
-import StatusBadge from "@/components/status-badge";
 import EmptyState from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { clients, getTripById, tripStatusOrder } from "@/lib/mock/data";
 import type { AwardOption, TripStatus } from "@/lib/types";
-
-const nextStepCopy: Record<TripStatus, string> = {
-  Intake: "Complete intake details, then start Searching.",
-  Searching: "Add award options and pin the best option.",
-  "Draft Ready": "Generate itinerary and send to client.",
-  Sent: "Follow up; mark booked when confirmed.",
-  Booked: "Capture final notes; close trip.",
-  Closed: "Read-only.",
-};
 
 export default function TripDetailPage() {
   const params = useParams<{ id: string }>();
@@ -40,22 +31,15 @@ export default function TripDetailPage() {
   const [awardOptions, setAwardOptions] = useState<AwardOption[]>(
     initialTrip?.awardOptions ?? []
   );
-  const [pinnedAwardOptionId, setPinnedAwardOptionId] = useState<string | undefined>(
-    initialTrip?.pinnedAwardOptionId
-  );
-  const [hotels] = useState(initialTrip?.hotelOptions ?? []);
+  const [pinnedAwardOptionId, setPinnedAwardOptionId] = useState<
+    string | undefined
+  >(initialTrip?.pinnedAwardOptionId);
   const [notes, setNotes] = useState(initialTrip?.notes ?? "");
-  const [isAddingAward, setIsAddingAward] = useState(false);
-  const [editingAwardId, setEditingAwardId] = useState<string | null>(null);
-  const [newAward, setNewAward] = useState({
-    program: "",
-    route: "",
-    milesRequired: "",
-    feesUSD: "",
-    transferRequired: "true",
-    transferTime: "Instant",
-    badges: "",
-  });
+  const [awardModalState, setAwardModalState] = useState<{
+    open: boolean;
+    mode: "add" | "edit";
+    option: AwardOption | null;
+  }>({ open: false, mode: "add", option: null });
 
   if (!initialTrip || !client) {
     return (
@@ -68,444 +52,305 @@ export default function TripDetailPage() {
   }
 
   const isClosed = status === "Closed";
-  const hasPinned = Boolean(pinnedAwardOptionId);
-  const canGenerate = status === "Draft Ready" && awardOptions.length > 0 && hasPinned;
+  const pinnedOption = awardOptions.find(
+    (option) => option.id === pinnedAwardOptionId
+  );
+  const hasPinnedOption = Boolean(pinnedOption);
+  const canGenerate = status === "Draft Ready" && hasPinnedOption;
 
-  const handleAddAward = () => {
-    if (!newAward.program || !newAward.route || !newAward.milesRequired) {
-      return;
-    }
-
-    const created: AwardOption = {
-      id: `award_${Date.now()}`,
-      tripId: initialTrip.id,
-      program: newAward.program,
-      route: newAward.route,
-      milesRequired: Number(newAward.milesRequired),
-      feesUSD: Number(newAward.feesUSD || 0),
-      transferRequired: newAward.transferRequired === "true",
-      transferTime: newAward.transferTime as AwardOption["transferTime"],
-      badges: newAward.badges
-        ? newAward.badges.split(",").map((badge) => badge.trim())
-        : [],
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-
-    setAwardOptions((prev) => [created, ...prev]);
-    setIsAddingAward(false);
-    setNewAward({
-      program: "",
-      route: "",
-      milesRequired: "",
-      feesUSD: "",
-      transferRequired: "true",
-      transferTime: "Instant",
-      badges: "",
-    });
-  };
-
-  const handleEditAward = (option: AwardOption, updates: Partial<AwardOption>) => {
-    setAwardOptions((prev) =>
-      prev.map((item) => (item.id === option.id ? { ...item, ...updates } : item))
+  const orderedAwardOptions = useMemo(() => {
+    const unpinned = awardOptions.filter(
+      (option) => option.id !== pinnedAwardOptionId
     );
+    const sortedUnpinned = [...unpinned].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    return pinnedOption ? [pinnedOption, ...sortedUnpinned] : sortedUnpinned;
+  }, [awardOptions, pinnedAwardOptionId, pinnedOption]);
+
+  const generateHelperText =
+    status !== "Draft Ready"
+      ? "Set status to Draft Ready to generate."
+      : !hasPinnedOption
+        ? "Pin an award option to generate."
+        : undefined;
+
+  const handleSaveAwardOption = (values: AwardOptionFormOutput) => {
+    if (awardModalState.mode === "add") {
+      const created: AwardOption = {
+        id: `award_${Date.now()}`,
+        tripId: initialTrip.id,
+        program: values.program,
+        route: values.route,
+        milesRequired: values.milesRequired,
+        feesUSD: values.feesUSD,
+        transferRequired: values.transferRequired,
+        transferTime: values.transferTime,
+        badges: values.badges,
+        createdAt: new Date().toISOString(),
+      };
+      setAwardOptions((prev) => [created, ...prev]);
+    } else if (awardModalState.option) {
+      setAwardOptions((prev) =>
+        prev.map((item) =>
+          item.id === awardModalState.option?.id
+            ? {
+                ...item,
+                program: values.program,
+                route: values.route,
+                milesRequired: values.milesRequired,
+                feesUSD: values.feesUSD,
+                transferRequired: values.transferRequired,
+                transferTime: values.transferTime,
+                badges: values.badges,
+              }
+            : item
+        )
+      );
+    }
+    setAwardModalState({ open: false, mode: "add", option: null });
   };
 
-  const tabs = [
-    {
-      id: "overview",
-      label: "Overview",
-      content: (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Trip Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-slate-600">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Route
-                </p>
-                <p className="font-semibold text-slate-900">
-                  {initialTrip.origin} → {initialTrip.destination}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-400">
-                  Dates
-                </p>
-                <p className="font-semibold text-slate-900">
-                  {initialTrip.dateStart} to {initialTrip.dateEnd}
-                </p>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    Flexibility
-                  </p>
-                  <p className="font-semibold text-slate-900">
-                    ±{initialTrip.flexibilityDays} days
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    Passengers
-                  </p>
-                  <p className="font-semibold text-slate-900">
-                    {initialTrip.passengers}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    Cabin
-                  </p>
-                  <p className="font-semibold text-slate-900">
-                    {initialTrip.cabinPref}
-                  </p>
-                </div>
-              </div>
-              {initialTrip.cashBudget ? (
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    Cash Budget
-                  </p>
-                  <p className="font-semibold text-slate-900">
-                    ${initialTrip.cashBudget}
-                  </p>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Client Snapshot</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-slate-600">
-              <p className="text-base font-semibold text-slate-900">
-                {client.fullName}
-              </p>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    Amex MR
-                  </p>
-                  <p className="font-semibold text-slate-900">
-                    {client.balances.amexMR.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    Chase UR
-                  </p>
-                  <p className="font-semibold text-slate-900">
-                    {client.balances.chaseUR.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    United
-                  </p>
-                  <p className="font-semibold text-slate-900">
-                    {client.balances.united.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-400">
-                    Hyatt
-                  </p>
-                  <p className="font-semibold text-slate-900">
-                    {client.balances.hyatt.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ),
-    },
-    {
-      id: "awards",
-      label: "Award Options",
-      content: (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900">
-              Award Options
-            </h3>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddingAward(true)}
-              disabled={isClosed}
-            >
-              + Add Award Option
-            </Button>
-          </div>
-
-          {isAddingAward ? (
-            <Card className="border border-dashed border-slate-200 p-4">
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  placeholder="Program"
-                  value={newAward.program}
-                  onChange={(event) =>
-                    setNewAward((prev) => ({ ...prev, program: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Route"
-                  value={newAward.route}
-                  onChange={(event) =>
-                    setNewAward((prev) => ({ ...prev, route: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Miles Required"
-                  type="number"
-                  value={newAward.milesRequired}
-                  onChange={(event) =>
-                    setNewAward((prev) => ({
-                      ...prev,
-                      milesRequired: event.target.value,
-                    }))
-                  }
-                />
-                <Input
-                  placeholder="Fees USD"
-                  type="number"
-                  value={newAward.feesUSD}
-                  onChange={(event) =>
-                    setNewAward((prev) => ({ ...prev, feesUSD: event.target.value }))
-                  }
-                />
-                <select
-                  className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-                  value={newAward.transferRequired}
-                  onChange={(event) =>
-                    setNewAward((prev) => ({
-                      ...prev,
-                      transferRequired: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="true">Transfer Required</option>
-                  <option value="false">No Transfer</option>
-                </select>
-                <select
-                  className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-                  value={newAward.transferTime}
-                  onChange={(event) =>
-                    setNewAward((prev) => ({
-                      ...prev,
-                      transferTime: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="Instant">Instant</option>
-                  <option value="1–2 days">1–2 days</option>
-                  <option value="Unknown">Unknown</option>
-                </select>
-                <Input
-                  placeholder="Badges (comma separated)"
-                  value={newAward.badges}
-                  onChange={(event) =>
-                    setNewAward((prev) => ({ ...prev, badges: event.target.value }))
-                  }
-                  className="md:col-span-2"
-                />
-              </div>
-              <div className="mt-4 flex items-center gap-2">
-                <Button onClick={handleAddAward}>Save option</Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setIsAddingAward(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </Card>
-          ) : null}
-
-          {awardOptions.length ? (
-            <div className="space-y-4">
-              {awardOptions.map((option) => {
-                const isPinned = pinnedAwardOptionId === option.id;
-                const isEditing = editingAwardId === option.id;
-                return (
-                  <div key={option.id} className="space-y-3">
-                    <AwardOptionCard
-                      option={option}
-                      isPinned={isPinned}
-                      onPin={() => {
-                        if (!isClosed) {
-                          setPinnedAwardOptionId(option.id);
-                        }
-                      }}
-                      onEdit={
-                        isClosed
-                          ? undefined
-                          : () =>
-                              setEditingAwardId(
-                                editingAwardId === option.id ? null : option.id
-                              )
-                      }
-                      onRemove={() =>
-                        !isClosed &&
-                        setAwardOptions((prev) => {
-                          const remaining = prev.filter(
-                            (item) => item.id !== option.id
-                          );
-                          if (pinnedAwardOptionId === option.id) {
-                            setPinnedAwardOptionId(undefined);
-                          }
-                          return remaining;
-                        })
-                      }
-                    />
-                    {isEditing ? (
-                      <Card className="border border-dashed border-slate-200 p-4">
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <Input
-                            value={option.program}
-                            onChange={(event) =>
-                              handleEditAward(option, {
-                                program: event.target.value,
-                              })
-                            }
-                          />
-                          <Input
-                            value={option.route}
-                            onChange={(event) =>
-                              handleEditAward(option, {
-                                route: event.target.value,
-                              })
-                            }
-                          />
-                          <Input
-                            type="number"
-                            value={option.milesRequired}
-                            onChange={(event) =>
-                              handleEditAward(option, {
-                                milesRequired: Number(event.target.value),
-                              })
-                            }
-                          />
-                          <Input
-                            type="number"
-                            value={option.feesUSD}
-                            onChange={(event) =>
-                              handleEditAward(option, {
-                                feesUSD: Number(event.target.value),
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="mt-3 flex items-center gap-2">
-                          <Button onClick={() => setEditingAwardId(null)}>
-                            Done
-                          </Button>
-                        </div>
-                      </Card>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <EmptyState
-              title="No award options yet"
-              description="Add an award option once you find availability to start comparisons."
-              actionLabel="Add award option"
-              onAction={() => setIsAddingAward(true)}
-            />
-          )}
-        </div>
-      ),
-    },
-    {
-      id: "hotels",
-      label: "Hotels",
-      content: (
-        <div className="space-y-4">
-          {hotels.length ? (
-            hotels.map((hotel) => <HotelOptionCard key={hotel.id} option={hotel} />)
-          ) : (
-            <EmptyState
-              title="No hotel options"
-              description="Add hotel options after confirming award availability."
-            />
-          )}
-        </div>
-      ),
-    },
-    {
-      id: "notes",
-      label: "Notes",
-      content: (
-        <InternalNotesEditor
-          value={notes}
-          onChange={setNotes}
-          placeholder="Add internal workflow notes here."
-        />
-      ),
-    },
-  ];
+  const handleRemoveAwardOption = (option: AwardOption) => {
+    if (window.confirm("Remove this award option?")) {
+      setAwardOptions((prev) => prev.filter((item) => item.id !== option.id));
+      if (pinnedAwardOptionId === option.id) {
+        setPinnedAwardOptionId(undefined);
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="text-sm text-slate-500">
-        <Link href="/trips" className="hover:text-slate-700">
-          Trips
-        </Link>
-        <span className="mx-2">/</span>
-        <span>{initialTrip.title}</span>
-      </div>
-
-      <PageHeader
+      <TripHeader
         title={`Trip: ${client.fullName} — ${initialTrip.title}`}
-        description={`${initialTrip.origin} → ${initialTrip.destination}`}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={status} />
-            <select
-              className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"
-              value={status}
-              onChange={(event) => setStatus(event.target.value as TripStatus)}
-              disabled={isClosed}
-            >
-              {tripStatusOrder.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-            <Button disabled={!canGenerate}>
-              Generate Itinerary
-            </Button>
-          </div>
-        }
+        status={status}
+        statusOptions={tripStatusOrder}
+        onStatusChange={setStatus}
+        onGenerateItinerary={() => undefined}
+        generateDisabled={!canGenerate || isClosed}
+        generateHelperText={generateHelperText}
+        isReadOnly={isClosed}
       />
 
-      <Card className="border border-slate-200 bg-white">
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400">
-              Next step
-            </p>
-            <p className="text-sm font-medium text-slate-700">
-              {nextStepCopy[status]}
-            </p>
-          </div>
-          {!canGenerate ? (
-            <Badge variant="secondary">
-              {status !== "Draft Ready"
-                ? "Update status to Draft Ready"
-                : "Pin an award option to enable itinerary"}
-            </Badge>
-          ) : null}
-        </CardContent>
-      </Card>
+      <TripNextStepBanner status={status} />
 
-      <Tabs tabs={tabs} />
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="awards">Award Options</TabsTrigger>
+          <TabsTrigger value="hotels">Hotels</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Trip Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-slate-600">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-400">
+                    Route
+                  </p>
+                  <p className="font-semibold text-slate-900">
+                    {initialTrip.origin} → {initialTrip.destination}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-400">
+                    Dates
+                  </p>
+                  <p className="font-semibold text-slate-900">
+                    {initialTrip.dateStart} to {initialTrip.dateEnd}
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Flexibility
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      ±{initialTrip.flexibilityDays} days
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Passengers
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {initialTrip.passengers}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Cabin
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {initialTrip.cabinPref}
+                    </p>
+                  </div>
+                </div>
+                {initialTrip.cashBudget ? (
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Cash Budget
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      ${initialTrip.cashBudget}
+                    </p>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Client Snapshot</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-slate-600">
+                <p className="text-base font-semibold text-slate-900">
+                  {client.fullName}
+                </p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Amex MR
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {client.balances.amexMR.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Chase UR
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {client.balances.chaseUR.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      United
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {client.balances.united.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">
+                      Hyatt
+                    </p>
+                    <p className="font-semibold text-slate-900">
+                      {client.balances.hyatt.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="awards">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Award Options
+              </h3>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setAwardModalState({ open: true, mode: "add", option: null })
+                }
+                disabled={isClosed}
+              >
+                + Add Award Option
+              </Button>
+            </div>
+
+            {orderedAwardOptions.length ? (
+              <div className="space-y-4">
+                {orderedAwardOptions.map((option) => {
+                  const isPinned = pinnedAwardOptionId === option.id;
+                  return (
+                    <AwardOptionCard
+                      key={option.id}
+                      option={option}
+                      isPinned={isPinned}
+                      isReadOnly={isClosed}
+                      onPin={() => setPinnedAwardOptionId(option.id)}
+                      onEdit={() =>
+                        setAwardModalState({
+                          open: true,
+                          mode: "edit",
+                          option,
+                        })
+                      }
+                      onRemove={() => handleRemoveAwardOption(option)}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState
+                title="No award options yet"
+                description="Add an award option once you find availability to start comparisons."
+                actionLabel={isClosed ? undefined : "Add award option"}
+                onAction={
+                  isClosed
+                    ? undefined
+                    : () =>
+                        setAwardModalState({
+                          open: true,
+                          mode: "add",
+                          option: null,
+                        })
+                }
+              />
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="hotels">
+          <div className="space-y-4">
+            {initialTrip.hotelOptions.length ? (
+              initialTrip.hotelOptions.map((hotel) => (
+                <HotelOptionCard key={hotel.id} option={hotel} />
+              ))
+            ) : (
+              <EmptyState
+                title="No hotel options"
+                description="Add hotel options after confirming award availability."
+              />
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="notes">
+          <InternalNotesEditor
+            value={notes}
+            onChange={setNotes}
+            placeholder="Add internal workflow notes here."
+            readOnly={isClosed}
+          />
+        </TabsContent>
+      </Tabs>
+
+      <AwardOptionModal
+        open={awardModalState.open}
+        mode={awardModalState.mode}
+        initialValues={awardModalState.option ?? undefined}
+        onOpenChange={(open) =>
+          setAwardModalState((prev) => ({
+            ...prev,
+            open,
+            option: open ? prev.option : null,
+            mode: open ? prev.mode : "add",
+          }))
+        }
+        onSave={handleSaveAwardOption}
+      />
     </div>
   );
 }

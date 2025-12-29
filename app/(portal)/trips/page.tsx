@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import DataTable from "@/components/data-table";
-import StatusBadge from "@/components/status-badge";
+import StatusBadge from "@/components/common/StatusBadge";
 import { Input } from "@/components/ui/input";
 import { clients, trips, tripStatusOrder } from "@/lib/mock/data";
 import type { Trip } from "@/lib/types";
@@ -14,7 +14,9 @@ const statusOptions = ["All", ...tripStatusOrder] as const;
 export default function TripsPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<(typeof statusOptions)[number]>("All");
+  const [statusFilter, setStatusFilter] = useState<
+    (typeof statusOptions)[number]
+  >("All");
 
   const filteredTrips = useMemo(() => {
     return trips.filter((trip) => {
