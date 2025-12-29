@@ -23,6 +23,8 @@ const defaultPortalData: PortalData = {
 
 let portalDataState: PortalData = defaultPortalData;
 let isHydratedState = false;
+let snapshotState = { data: portalDataState, isHydrated: isHydratedState };
+const serverSnapshot = { data: defaultPortalData, isHydrated: false };
 const listeners = new Set<() => void>();
 
 function notifyListeners() {
@@ -115,6 +117,7 @@ function hydrateStore() {
   }
 
   isHydratedState = true;
+  snapshotState = { data: portalDataState, isHydrated: isHydratedState };
   notifyListeners();
 }
 
@@ -125,14 +128,15 @@ function setPortalData(update: PortalDataUpdater) {
     typeof update === "function" ? update(portalDataState) : update;
   portalDataState = normalizePortalData(nextData);
   persist(portalDataState);
+  snapshotState = { data: portalDataState, isHydrated: isHydratedState };
   notifyListeners();
 }
 
 export function usePortalData() {
   const snapshot = useSyncExternalStore(
     subscribe,
-    () => ({ data: portalDataState, isHydrated: isHydratedState }),
-    () => ({ data: defaultPortalData, isHydrated: false })
+    () => snapshotState,
+    () => serverSnapshot
   );
 
   useEffect(() => {
