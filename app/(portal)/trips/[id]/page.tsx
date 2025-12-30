@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import AwardOptionCard from "@/components/trips/AwardOptionCard";
 import AwardOptionModal, {
@@ -75,6 +76,11 @@ export default function TripDetailPage() {
   const pinnedOption = trip?.awardOptions.find(
     (option) => option.id === trip.pinnedAwardOptionId
   );
+  const relevantProgram =
+    pinnedOption?.program ?? trip?.awardOptions[0]?.program ?? null;
+  const knowledgeBaseHref = relevantProgram
+    ? `/kb?query=${encodeURIComponent(relevantProgram)}`
+    : "/kb";
   const hasCashEquivalent = Boolean(
     trip?.awardOptions.some((option) => option.cashEquivalentUSD !== undefined)
   );
@@ -712,6 +718,12 @@ export default function TripDetailPage() {
                     ) : null}
                   </select>
                 </div>
+                <Link
+                  href={knowledgeBaseHref}
+                  className="text-sm font-semibold text-slate-600 hover:text-slate-900"
+                >
+                  View relevant knowledge
+                </Link>
                 <Button
                   variant="outline"
                   onClick={() =>

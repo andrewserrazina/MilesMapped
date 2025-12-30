@@ -128,3 +128,18 @@ export interface AwardSearchIntegrationsSettings {
   pointMe: AwardSearchIntegrationConfig;
   roame: AwardSearchIntegrationConfig;
 }
+
+export type KnowledgeArticleCategory =
+  | "Sweet Spots"
+  | "Transfer Partners"
+  | "Airline Quirks"
+  | "SOPs";
+
+export interface KnowledgeArticle {
+  id: string;
+  title: string;
+  category: KnowledgeArticleCategory;
+  content: string;
+  tags: string[];
+  createdAt: string;
+}
