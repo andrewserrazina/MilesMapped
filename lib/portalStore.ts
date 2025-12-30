@@ -1,19 +1,20 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { clients, itineraries, trips } from "@/lib/mock/data";
+import { clients, itineraries, knowledgeArticles, trips } from "@/lib/mock/data";
 import { resetPortalStorage } from "@/lib/storage";
 import type {
   AwardOption,
   AwardSearchIntegrationsSettings,
   Client,
   Itinerary,
+  KnowledgeArticle,
   Trip,
 } from "@/lib/types";
 import { defaultTripIntake } from "@/lib/types";
 
 const STORAGE_KEY = "milesmapped.portalData";
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 export interface PortalData {
   schemaVersion: number;
@@ -21,6 +22,7 @@ export interface PortalData {
   trips: Trip[];
   itineraries: Itinerary[];
   awardSearchIntegrations: AwardSearchIntegrationsSettings;
+  knowledgeArticles: KnowledgeArticle[];
 }
 
 const defaultAwardSearchIntegrations: AwardSearchIntegrationsSettings = {
@@ -42,6 +44,7 @@ const defaultPortalData: PortalData = {
   trips,
   itineraries,
   awardSearchIntegrations: defaultAwardSearchIntegrations,
+  knowledgeArticles,
 };
 
 let portalDataState: PortalData = defaultPortalData;
@@ -98,10 +101,12 @@ function isPortalData(value: unknown): value is PortalData {
     "clients" in value &&
     "trips" in value &&
     "itineraries" in value &&
+    "knowledgeArticles" in value &&
     (value as PortalData).schemaVersion === SCHEMA_VERSION &&
     Array.isArray((value as PortalData).clients) &&
     Array.isArray((value as PortalData).trips) &&
-    Array.isArray((value as PortalData).itineraries)
+    Array.isArray((value as PortalData).itineraries) &&
+    Array.isArray((value as PortalData).knowledgeArticles)
   );
 }
 
@@ -136,6 +141,8 @@ function normalizePortalData(data: PortalData): PortalData {
         ...data.awardSearchIntegrations?.roame,
       },
     },
+    knowledgeArticles:
+      data.knowledgeArticles?.length ? data.knowledgeArticles : knowledgeArticles,
   };
 }
 

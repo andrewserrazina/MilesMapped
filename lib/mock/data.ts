@@ -4,6 +4,7 @@ import type {
   Client,
   HotelOption,
   Itinerary,
+  KnowledgeArticle,
   Trip,
 } from "@/lib/types";
 import { defaultTripIntake } from "@/lib/types";
@@ -147,6 +148,115 @@ export const hotelOptions: HotelOption[] = [
     pointsPerNight: 18000,
     cashAltUSD: 310,
     notes: "Ocean view rooms available.",
+  },
+];
+
+export const knowledgeArticles: KnowledgeArticle[] = [
+  {
+    id: "kb_001",
+    title: "Virgin Atlantic ANA sweet spot checklist",
+    category: "Sweet Spots",
+    content: `# Virgin Atlantic ANA sweet spot
+
+Use Virgin Atlantic Flying Club to book ANA business/first between the US and Japan.
+
+## When to use it
+- Roundtrip only pricing required
+- Best for West Coast to Tokyo (lower mileage bands)
+
+## Steps
+1. Verify ANA space on United or ANA.
+2. Call Virgin to ticket (online rarely works).
+3. Confirm taxes stay under $200.
+
+**Pro tip:** Keep a backup carrier in case ANA space disappears.`,
+    tags: ["Virgin Atlantic", "ANA", "Japan", "Sweet Spot"],
+    createdAt: "2024-09-04",
+  },
+  {
+    id: "kb_002",
+    title: "Chase → Air France transfer playbook",
+    category: "Transfer Partners",
+    content: `# Chase to Air France/KLM
+
+Transfers from Chase Ultimate Rewards to Flying Blue are usually instant.
+
+## Notes
+- Watch for monthly Promo Rewards.
+- Taxes are moderate; avoid last-minute departures.
+
+## Agent checklist
+- Confirm cabin inventory before transferring
+- Screenshot award price for client record`,
+    tags: ["Chase", "Flying Blue", "Air France", "Transfer"],
+    createdAt: "2024-10-12",
+  },
+  {
+    id: "kb_003",
+    title: "United quirks: mixed cabin pricing",
+    category: "Airline Quirks",
+    content: `# United mixed cabin quirks
+
+United can price long-haul segments in business with a short economy hop.
+
+## What to watch
+- The itinerary may display "Business" even with an economy segment.
+- Always open segment details to confirm cabin per leg.
+
+## SOP
+Add a note in the itinerary explaining any economy positioning.`,
+    tags: ["United", "Mixed Cabin", "Quirk"],
+    createdAt: "2024-11-02",
+  },
+  {
+    id: "kb_004",
+    title: "SOP: award option intake notes",
+    category: "SOPs",
+    content: `# Award option intake SOP
+
+Log every award option with:
+- Program and route
+- Mileage + taxes
+- Transfer time
+- Screenshot of availability
+
+## Ownership
+Assign the trip lead in the notes field.`,
+    tags: ["SOP", "Award Options", "Process"],
+    createdAt: "2024-08-18",
+  },
+  {
+    id: "kb_005",
+    title: "Capital One → Virgin Atlantic timing",
+    category: "Transfer Partners",
+    content: `# Capital One to Virgin Atlantic
+
+Transfers are usually instant but can lag 5–15 minutes.
+
+## Best practices
+- Initiate transfer before calling Virgin.
+- Keep the client on standby for final ticketing.
+
+**Reminder:** Virgin charges per segment for changes.`,
+    tags: ["Capital One", "Virgin Atlantic", "Transfer Time"],
+    createdAt: "2024-09-22",
+  },
+  {
+    id: "kb_006",
+    title: "Sweet spot: Avianca LifeMiles to Europe",
+    category: "Sweet Spots",
+    content: `# Avianca LifeMiles to Europe
+
+LifeMiles often prices Star Alliance business to Europe at 63k one-way.
+
+## Good to know
+- Mixed cabin pricing can lower totals.
+- Avoid Lufthansa first within 14 days (limited access).
+
+## Suggested tags
+Star Alliance, LifeMiles, Europe`,
+    tags: ["LifeMiles", "Star Alliance", "Europe"],
+    createdAt: "2024-10-05",
   },
 ];
 
