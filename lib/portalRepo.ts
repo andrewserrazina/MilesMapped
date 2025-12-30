@@ -4,7 +4,6 @@ import type {
   AwardSearchIntegrationsSettings,
   Client,
   Itinerary,
-  KnowledgeArticle,
   Trip,
 } from "@/lib/types";
 import {
@@ -73,12 +72,12 @@ export const portalRepo = {
     updateAwardSearchIntegrations(patch);
   },
 
-  listKnowledgeArticles: (data?: PortalData | null): KnowledgeArticle[] =>
+  listKnowledgeArticles: (data?: PortalData | null): PortalData["knowledgeArticles"] =>
     data?.knowledgeArticles ?? [],
   getKnowledgeArticle: (
     data: PortalData | null | undefined,
     id: string
-  ): KnowledgeArticle | null =>
+  ): PortalData["knowledgeArticles"][number] | null =>
     data?.knowledgeArticles.find((article) => article.id === id) ?? null,
 
   usePortalData,
