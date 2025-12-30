@@ -18,8 +18,7 @@ export type PermissionAction =
 
 export function can(
   user: CurrentUser,
-  action: PermissionAction,
-  _resource?: unknown
+  action: PermissionAction
 ): boolean {
   if (user.role === "admin") {
     return true;
