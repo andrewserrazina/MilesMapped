@@ -20,6 +20,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildAwardSearchUrl } from "@/lib/awardSearchLinks";
 import { tripStatusOrder } from "@/lib/mock/data";
 import { portalRepo } from "@/lib/portalRepo";
+import {
+  countCompletedIntake,
+  getItineraryGenerationRule,
+  getStatusTransitionRule,
+} from "@/lib/sop/rules";
 import type { AwardOption, Itinerary, TripIntake, TripStatus } from "@/lib/types";
 import { useCurrentUser } from "@/lib/auth/mockAuth";
 import { can } from "@/lib/auth/permissions";
@@ -48,6 +53,7 @@ export default function TripDetailPage() {
     "idle"
   );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [sopWarning, setSopWarning] = useState<string | null>(null);
   const [newlyAddedOptionId, setNewlyAddedOptionId] = useState<string | null>(
     null
   );
@@ -56,6 +62,10 @@ export default function TripDetailPage() {
   const trip = useMemo(
     () => portalRepo.getTrip(portalData, params.id),
     [params.id, portalData]
+  );
+  const itineraries = useMemo(
+    () => portalRepo.listItineraries(portalData),
+    [portalData]
   );
   const client = useMemo(
     () => (trip ? portalRepo.getClient(portalData, trip.clientId) : null),
@@ -117,17 +127,13 @@ export default function TripDetailPage() {
     return pinnedOption ? [pinnedOption, ...sortedUnpinned] : sortedUnpinned;
   }, [trip, pinnedOption, awardSort]);
 
-  const hasPinnedOption = Boolean(pinnedOption);
   const isClosed = trip ? portalRepo.isTripReadOnly(trip) : false;
   const canEditTrip = can(currentUser, "trip.edit");
   const canCloseTrip = can(currentUser, "trip.close");
   const canMarkSent = can(currentUser, "trip.markSent");
   const canMarkBooked = can(currentUser, "trip.markBooked");
   const canAssignAgent = can(currentUser, "trip.assign");
-  const canGenerate =
-    trip?.status === "Draft Ready" &&
-    hasPinnedOption &&
-    can(currentUser, "itinerary.generate");
+  const canGenerate = can(currentUser, "itinerary.generate");
   const awardSearchIntegrations =
     portalRepo.getAwardSearchIntegrations(portalData);
   const showPointMe = Boolean(awardSearchIntegrations?.pointMe.enabled);
@@ -145,10 +151,13 @@ export default function TripDetailPage() {
     },
     { key: "budgetNotesAdded", label: "Budget notes added (cash/fees tolerance)" },
   ];
-  const countCompletedIntake = (intake: TripIntake) =>
-    intakeItems.filter((item) => intake[item.key]).length;
-  const completedIntakeCount = trip ? countCompletedIntake(trip.intake) : 0;
-  const canMoveToSearching = completedIntakeCount >= 4;
+  const completedIntakeCount = trip
+    ? countCompletedIntake(trip.intake)
+    : 0;
+  const searchingRule = trip
+    ? getStatusTransitionRule(trip, "Searching", itineraries)
+    : { allowed: false };
+  const canMoveToSearching = searchingRule.allowed;
   const showIntakeChecklist =
     trip?.status === "Intake" || trip?.status === "Searching";
   const statusPermissionHelperText = !canEditTrip
@@ -185,14 +194,14 @@ export default function TripDetailPage() {
     setNewlyAddedOptionId(null);
   }, [newlyAddedOptionId, orderedAwardOptions]);
 
-  const generateHelperText =
-    trip?.status !== "Draft Ready"
-      ? "Set status to Draft Ready to generate."
-      : !hasPinnedOption
-        ? "Pin an award option to generate."
-        : !can(currentUser, "itinerary.generate")
-          ? "You don’t have permission to generate itineraries."
-        : undefined;
+  const itineraryRule = trip
+    ? getItineraryGenerationRule(trip)
+    : { allowed: false };
+  const generateHelperText = !itineraryRule.allowed
+    ? itineraryRule.reason
+    : !can(currentUser, "itinerary.generate")
+      ? "You don’t have permission to generate itineraries."
+      : undefined;
 
   if (!isHydrated) {
     return (
@@ -278,13 +287,22 @@ export default function TripDetailPage() {
   };
 
   const handleGenerateItinerary = () => {
-    if (!trip || !pinnedOption) {
+    if (!trip) {
+      return;
+    }
+    const sopRule = getItineraryGenerationRule(trip);
+    if (!sopRule.allowed) {
+      setSopWarning(sopRule.reason ?? "SOP requirements are not met.");
       return;
     }
     if (!can(currentUser, "itinerary.generate")) {
       return;
     }
+    if (!pinnedOption) {
+      return;
+    }
 
+    setSopWarning(null);
     const backupOptions = trip.awardOptions.filter(
       (option) => option.id !== pinnedOption.id
     );
@@ -359,14 +377,17 @@ export default function TripDetailPage() {
               return current;
             }
 
-            if (
-              current.status === "Intake" &&
-              nextStatus === "Searching" &&
-              countCompletedIntake(current.intake) < 4
-            ) {
+            const sopRule = getStatusTransitionRule(
+              current,
+              nextStatus,
+              itineraries
+            );
+            if (!sopRule.allowed) {
+              setSopWarning(sopRule.reason ?? "SOP requirements are not met.");
               return current;
             }
 
+            setSopWarning(null);
             return {
               ...current,
               status: nextStatus,
@@ -385,7 +406,7 @@ export default function TripDetailPage() {
           })
         }
         onGenerateItinerary={handleGenerateItinerary}
-        generateDisabled={!canGenerate || isClosed}
+        generateDisabled={!canGenerate || !itineraryRule.allowed || isClosed}
         generateHelperText={generateHelperText}
         statusOptionDisabled={(option) => {
           if (!canEditTrip) {
@@ -400,20 +421,27 @@ export default function TripDetailPage() {
           if (option === "Closed" && !canCloseTrip) {
             return true;
           }
-          if (
-            trip.status === "Intake" &&
-            option === "Searching" &&
-            !canMoveToSearching
-          ) {
-            return true;
+          const sopRule = getStatusTransitionRule(trip, option, itineraries);
+          return !sopRule.allowed;
+        }}
+        statusOptionTooltip={(option) => {
+          const sopRule = getStatusTransitionRule(trip, option, itineraries);
+          if (!sopRule.allowed) {
+            return sopRule.reason;
           }
-          return false;
+          if (!canEditTrip) {
+            return statusPermissionHelperText;
+          }
+          if (option === "Closed" && !canCloseTrip) {
+            return statusPermissionHelperText;
+          }
+          return undefined;
         }}
         statusHelperText={
           !canEditTrip
             ? statusPermissionHelperText
             : trip.status === "Intake" && !canMoveToSearching
-              ? "Complete at least 4 intake items to start searching."
+              ? searchingRule.reason
               : statusPermissionHelperText
         }
         isReadOnly={isClosed}
@@ -446,6 +474,13 @@ export default function TripDetailPage() {
           ) : null
         }
       />
+
+      {sopWarning ? (
+        <Alert variant="destructive">
+          <AlertTitle>SOP Warning</AlertTitle>
+          <AlertDescription>{sopWarning}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {awardSearchMessage ? (
         <Alert>
