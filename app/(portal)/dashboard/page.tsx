@@ -12,6 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { portalRepo } from "@/lib/portalRepo";
 import { useCurrentUser } from "@/lib/auth/mockAuth";
 import { can } from "@/lib/auth/permissions";
+import {
+  computeGlobalMetrics,
+  formatCurrency,
+  formatDurationDays,
+  formatMiles,
+} from "@/lib/metrics/compute";
 
 export default function DashboardPage() {
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
@@ -20,6 +26,11 @@ export default function DashboardPage() {
   const canCreateTrip = can(currentUser, "trip.create");
   const clients = portalRepo.listClients(portalData);
   const trips = portalRepo.listTrips(portalData);
+  const itineraries = portalRepo.listItineraries(portalData);
+  const globalMetrics = useMemo(
+    () => computeGlobalMetrics(trips, itineraries),
+    [itineraries, trips]
+  );
 
   const kpis = useMemo(() => {
     return [
@@ -41,11 +52,21 @@ export default function DashboardPage() {
           .filter((trip) => trip.status === "Sent" || trip.status === "Booked")
           .length.toString(),
       },
-      { label: "Avg Points Saved", value: "48k" },
-      { label: "Revenue MTD", value: "$18.4k" },
-      { label: "Pending Followups", value: "6" },
+      {
+        label: "Avg Savings / Trip",
+        value: formatCurrency(globalMetrics.avgSavingsPerTrip),
+      },
+      {
+        label: "Avg Miles Used",
+        value: formatMiles(globalMetrics.avgMilesUsedPerTrip),
+      },
+      {
+        label: "Avg Delivery Time",
+        value: formatDurationDays(globalMetrics.avgDeliveryTimeDays),
+        helper: "Draft Ready → Sent",
+      },
     ];
-  }, [clients, currentUser.name, trips]);
+  }, [clients, currentUser.name, globalMetrics, trips]);
 
   if (!isHydrated) {
     return (
