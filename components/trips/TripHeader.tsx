@@ -19,6 +19,7 @@ export default function TripHeader({
   generateDisabled,
   generateHelperText,
   statusOptionDisabled,
+  statusOptionTooltip,
   statusHelperText,
   assignedAgentDisabled,
   assignedAgentHelperText,
@@ -36,6 +37,7 @@ export default function TripHeader({
   generateDisabled: boolean;
   generateHelperText?: string;
   statusOptionDisabled?: (status: TripStatus) => boolean;
+  statusOptionTooltip?: (status: TripStatus) => string | undefined;
   statusHelperText?: string;
   assignedAgentDisabled?: boolean;
   assignedAgentHelperText?: string;
@@ -78,6 +80,7 @@ export default function TripHeader({
                   key={item}
                   value={item}
                   disabled={statusOptionDisabled?.(item)}
+                  title={statusOptionTooltip?.(item)}
                 >
                   {item}
                 </option>
