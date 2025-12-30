@@ -4,7 +4,6 @@ import type {
   AwardSearchIntegrationsSettings,
   Client,
   Itinerary,
-  KnowledgeArticle,
   Trip,
 } from "@/lib/types";
 import {
