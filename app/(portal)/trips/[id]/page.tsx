@@ -14,6 +14,7 @@ import HotelOptionCard from "@/components/hotel-option-card";
 import InternalNotesEditor from "@/components/internal-notes-editor";
 import EmptyState from "@/components/common/EmptyState";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -72,6 +73,27 @@ export default function TripDetailPage() {
     () => (trip ? portalRepo.getClient(portalData, trip.clientId) : null),
     [portalData, trip]
   );
+  const communicationEntries = useMemo(() => {
+    if (!trip) {
+      return [];
+    }
+    return portalRepo
+      .listCommunicationEntries(portalData)
+      .filter((entry) => entry.tripId === trip.id)
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }, [portalData, trip]);
+
+  const formatTimestamp = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleString();
+  };
 
   const pinnedOption = trip?.awardOptions.find(
     (option) => option.id === trip.pinnedAwardOptionId
@@ -810,17 +832,53 @@ export default function TripDetailPage() {
         </TabsContent>
 
         <TabsContent value="notes">
-          <InternalNotesEditor
-            value={trip.notes ?? ""}
-            onChange={(value) =>
-              portalRepo.updateTrip(trip.id, (current) => ({
-                ...current,
-                notes: value,
-              }))
-            }
-            placeholder="Add internal workflow notes here."
-            readOnly={isClosed}
-          />
+          <div className="space-y-6">
+            <InternalNotesEditor
+              value={trip.notes ?? ""}
+              onChange={(value) =>
+                portalRepo.updateTrip(trip.id, (current) => ({
+                  ...current,
+                  notes: value,
+                }))
+              }
+              placeholder="Add internal workflow notes here."
+              readOnly={isClosed}
+            />
+            <Card>
+              <CardHeader>
+                <CardTitle>Communication Log</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {communicationEntries.length ? (
+                  communicationEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-lg border border-slate-200 p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">{entry.type}</Badge>
+                          <span className="text-xs text-slate-500">
+                            {formatTimestamp(entry.createdAt)}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-500">
+                          Logged by {entry.createdBy}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm text-slate-700">
+                        {entry.summary}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    No trip communication entries yet.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 

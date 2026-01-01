@@ -6,17 +6,24 @@ import { useParams } from "next/navigation";
 import PageHeader from "@/components/page-header";
 import Tabs from "@/components/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Trip } from "@/lib/types";
+import { Select } from "@/components/ui/select";
+import { useCurrentUser } from "@/lib/auth/mockAuth";
+import type { CommunicationEntry, Trip } from "@/lib/types";
 import { portalRepo } from "@/lib/portalRepo";
 
 export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
   const tripsData = portalRepo.listTrips(portalData);
+  const currentUser = useCurrentUser();
   const [notes, setNotes] = useState(
     "Meeting notes and client-specific follow-ups live here."
   );
+  const [entryType, setEntryType] =
+    useState<CommunicationEntry["type"]>("Email");
+  const [entrySummary, setEntrySummary] = useState("");
 
   const client = useMemo(
     () => portalRepo.getClient(portalData, params.id),
@@ -26,6 +33,27 @@ export default function ClientDetailPage() {
     () => tripsData.filter((trip) => trip.clientId === client?.id),
     [client?.id, tripsData]
   );
+  const communicationEntries = useMemo(() => {
+    if (!client) {
+      return [];
+    }
+    return portalRepo
+      .listCommunicationEntries(portalData)
+      .filter((entry) => entry.clientId === client.id)
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }, [client, portalData]);
+
+  const formatTimestamp = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleString();
+  };
 
   if (!isHydrated) {
     return (
@@ -208,18 +236,108 @@ export default function ClientDetailPage() {
       id: "notes",
       label: "Notes",
       content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>Internal Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <textarea
-              className="min-h-[160px] w-full rounded-lg border border-slate-200 p-4 text-sm"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Internal Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <textarea
+                className="min-h-[160px] w-full rounded-lg border border-slate-200 p-4 text-sm"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Communication Log</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form
+                className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!client) {
+                    return;
+                  }
+                  const summary = entrySummary.trim();
+                  if (!summary) {
+                    return;
+                  }
+                  portalRepo.createCommunicationEntry({
+                    clientId: client.id,
+                    type: entryType,
+                    summary,
+                    createdBy: currentUser.name,
+                  });
+                  setEntrySummary("");
+                  setEntryType("Email");
+                }}
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Type
+                  </p>
+                  <Select
+                    value={entryType}
+                    onChange={(event) =>
+                      setEntryType(event.target.value as CommunicationEntry["type"])
+                    }
+                  >
+                    <option value="Email">Email</option>
+                    <option value="Call">Call</option>
+                    <option value="Text">Text</option>
+                    <option value="Other">Other</option>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Summary
+                  </p>
+                  <textarea
+                    className="min-h-[120px] w-full rounded-lg border border-slate-200 p-3 text-sm"
+                    value={entrySummary}
+                    onChange={(event) => setEntrySummary(event.target.value)}
+                    placeholder="Log the client touchpoint and next steps."
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button type="submit">Add entry</Button>
+                </div>
+              </form>
+              <div className="space-y-3">
+                {communicationEntries.length ? (
+                  communicationEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="rounded-lg border border-slate-200 p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">{entry.type}</Badge>
+                          <span className="text-xs text-slate-500">
+                            {formatTimestamp(entry.createdAt)}
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-500">
+                          Logged by {entry.createdBy}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-sm text-slate-700">
+                        {entry.summary}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    No communication entries yet.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       ),
     },
   ];

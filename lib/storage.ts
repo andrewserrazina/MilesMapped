@@ -1,19 +1,26 @@
-import { clients, itineraries, trips } from "@/lib/mock/data";
+import {
+  clients,
+  communicationEntries,
+  itineraries,
+  trips,
+} from "@/lib/mock/data";
 import type {
   AwardSearchIntegrationsSettings,
   Client,
+  CommunicationEntry,
   Itinerary,
   Trip,
 } from "@/lib/types";
 
 const STORAGE_KEY = "milesmapped.portalData";
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 export interface PortalData {
   schemaVersion: number;
   clients: Client[];
   trips: Trip[];
   itineraries: Itinerary[];
+  communicationEntries: CommunicationEntry[];
   awardSearchIntegrations: AwardSearchIntegrationsSettings;
 }
 
@@ -35,6 +42,7 @@ const defaultPortalData: PortalData = {
   clients,
   trips,
   itineraries,
+  communicationEntries,
   awardSearchIntegrations: defaultAwardSearchIntegrations,
 };
 
@@ -78,9 +86,11 @@ function isPortalDataShape(value: unknown): value is PortalData {
     "clients" in value &&
     "trips" in value &&
     "itineraries" in value &&
+    "communicationEntries" in value &&
     Array.isArray((value as PortalData).clients) &&
     Array.isArray((value as PortalData).trips) &&
-    Array.isArray((value as PortalData).itineraries)
+    Array.isArray((value as PortalData).itineraries) &&
+    Array.isArray((value as PortalData).communicationEntries)
   );
 }
 
