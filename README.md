@@ -49,6 +49,23 @@ npm run start
 
 No environment variables are required for deployment right now.
 
+#### Data Mode
+
+Set `NEXT_PUBLIC_DATA_MODE` to control the data backend:
+
+```bash
+# default (localStorage-backed)
+NEXT_PUBLIC_DATA_MODE=local
+
+# Supabase stub (read-only placeholders until implemented)
+NEXT_PUBLIC_DATA_MODE=supabase
+```
+
+When `supabase` is enabled, the UI will show a banner indicating that the
+Supabase repo is not configured yet. Implementations are scaffolded in
+`lib/repo/supabaseRepo.ts`; replace the TODOs with Supabase queries/mutations
+and remove the placeholder errors as you wire up the backend.
+
 ## Scripts
 
 - `npm run dev` – start the dev server
