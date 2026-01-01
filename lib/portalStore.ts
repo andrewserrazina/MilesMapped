@@ -498,6 +498,42 @@ export function addTrip(trip: Trip) {
   }));
 }
 
+export function addKnowledgeArticle(article: KnowledgeArticle) {
+  setPortalData((previous) => ({
+    ...previous,
+    knowledgeArticles: [article, ...previous.knowledgeArticles],
+  }));
+}
+
+export function updateKnowledgeArticle(
+  articleId: string,
+  updater: (article: KnowledgeArticle) => KnowledgeArticle
+) {
+  setPortalData((previous) => {
+    const article = previous.knowledgeArticles.find(
+      (item) => item.id === articleId
+    );
+    if (!article) {
+      return previous;
+    }
+
+    const updatedArticle = updater(article);
+    return {
+      ...previous,
+      knowledgeArticles: previous.knowledgeArticles.map((item) =>
+        item.id === articleId ? updatedArticle : item
+      ),
+    };
+  });
+}
+
+export function addCommunicationEntry(entry: CommunicationEntry) {
+  setPortalData((previous) => ({
+    ...previous,
+    communicationEntries: [entry, ...previous.communicationEntries],
+  }));
+}
+
 type AwardSearchIntegrationsPatch = Partial<{
   pointMe: Partial<AwardSearchIntegrationsSettings["pointMe"]>;
   roame: Partial<AwardSearchIntegrationsSettings["roame"]>;

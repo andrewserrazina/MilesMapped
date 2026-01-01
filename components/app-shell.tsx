@@ -66,6 +66,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
       <main className="flex-1 px-6 py-8 md:px-10">
         <div className="mx-auto w-full max-w-6xl space-y-6">
+          {portalRepo.supabaseWarning ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {portalRepo.supabaseWarning}
+            </div>
+          ) : null}
           <div className="flex items-center justify-between gap-4 print-hidden">
             <div className="relative w-full max-w-xl">
               <Input
