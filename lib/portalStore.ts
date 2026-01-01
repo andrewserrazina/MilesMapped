@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { clients, itineraries, knowledgeArticles, trips } from "@/lib/mock/data";
+import {
+  clients,
+  communicationEntries,
+  itineraries,
+  knowledgeArticles,
+  trips,
+} from "@/lib/mock/data";
 import { resetPortalStorage } from "@/lib/storage";
 import type {
   AwardOption,
   AwardSearchIntegrationsSettings,
   Client,
+  CommunicationEntry,
   Itinerary,
   KnowledgeArticle,
   Trip,
@@ -14,13 +21,14 @@ import type {
 import { defaultTripIntake } from "@/lib/types";
 
 const STORAGE_KEY = "milesmapped.portalData";
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 export interface PortalData {
   schemaVersion: number;
   clients: typeof clients;
   trips: Trip[];
   itineraries: Itinerary[];
+  communicationEntries: CommunicationEntry[];
   awardSearchIntegrations: AwardSearchIntegrationsSettings;
   knowledgeArticles: KnowledgeArticle[];
 }
@@ -43,6 +51,7 @@ const defaultPortalData: PortalData = {
   clients,
   trips,
   itineraries,
+  communicationEntries,
   awardSearchIntegrations: defaultAwardSearchIntegrations,
   knowledgeArticles,
 };
@@ -101,11 +110,13 @@ function isPortalData(value: unknown): value is PortalData {
     "clients" in value &&
     "trips" in value &&
     "itineraries" in value &&
+    "communicationEntries" in value &&
     "knowledgeArticles" in value &&
     (value as PortalData).schemaVersion === SCHEMA_VERSION &&
     Array.isArray((value as PortalData).clients) &&
     Array.isArray((value as PortalData).trips) &&
     Array.isArray((value as PortalData).itineraries) &&
+    Array.isArray((value as PortalData).communicationEntries) &&
     Array.isArray((value as PortalData).knowledgeArticles)
   );
 }
@@ -131,6 +142,7 @@ function normalizePortalData(data: PortalData): PortalData {
     ...data,
     schemaVersion: SCHEMA_VERSION,
     trips: data.trips.map((trip) => normalizeTrip(trip)),
+    communicationEntries: data.communicationEntries ?? [],
     awardSearchIntegrations: {
       pointMe: {
         ...defaultAwardSearchIntegrations.pointMe,
@@ -153,6 +165,14 @@ function createId(prefix: string) {
 
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 }
+
+type NewCommunicationEntry = Omit<
+  CommunicationEntry,
+  "id" | "createdAt"
+> & {
+  id?: string;
+  createdAt?: string;
+};
 
 function buildSampleTrips(availableClients: Client[]): Trip[] {
   const [primaryClient, secondaryClient, tertiaryClient] = availableClients;
@@ -394,6 +414,19 @@ export function isTripReadOnly(trip: Trip) {
   return trip.status === "Closed";
 }
 
+function getStatusCommunicationSummary(status: Trip["status"]) {
+  switch (status) {
+    case "Sent":
+      return "Itinerary marked Sent and shared with the client.";
+    case "Booked":
+      return "Trip marked Booked after confirmation.";
+    case "Closed":
+      return "Trip marked Closed after completion.";
+    default:
+      return null;
+  }
+}
+
 export function updateTrip(tripId: string, updater: (trip: Trip) => Trip) {
   setPortalData((previous) => {
     const trip = previous.trips.find((item) => item.id === tripId);
@@ -402,11 +435,37 @@ export function updateTrip(tripId: string, updater: (trip: Trip) => Trip) {
     }
 
     const updatedTrip = normalizeTrip(updater(trip));
+    const statusSummary = getStatusCommunicationSummary(updatedTrip.status);
+    const statusChanged = trip.status !== updatedTrip.status;
+    const shouldLogStatus = statusChanged && statusSummary;
+    const hasStatusLog = shouldLogStatus
+      ? previous.communicationEntries.some(
+          (entry) =>
+            entry.tripId === updatedTrip.id && entry.summary === statusSummary
+        )
+      : false;
+    const nextCommunicationEntries =
+      shouldLogStatus && !hasStatusLog
+        ? [
+            {
+              id: createId("comm"),
+              clientId: updatedTrip.clientId,
+              tripId: updatedTrip.id,
+              type: "Other",
+              summary: statusSummary,
+              createdAt: new Date().toISOString(),
+              createdBy: "System",
+            },
+            ...previous.communicationEntries,
+          ]
+        : previous.communicationEntries;
+
     return {
       ...previous,
       trips: previous.trips.map((item) =>
         item.id === tripId ? updatedTrip : item
       ),
+      communicationEntries: nextCommunicationEntries,
     };
   });
 }
@@ -489,6 +548,20 @@ export function addTrip(trip: Trip) {
   setPortalData((previous) => ({
     ...previous,
     trips: [normalizeTrip(trip), ...previous.trips],
+  }));
+}
+
+export function addCommunicationEntry(entry: NewCommunicationEntry) {
+  setPortalData((previous) => ({
+    ...previous,
+    communicationEntries: [
+      {
+        ...entry,
+        id: entry.id ?? createId("comm"),
+        createdAt: entry.createdAt ?? new Date().toISOString(),
+      },
+      ...previous.communicationEntries,
+    ],
   }));
 }
 

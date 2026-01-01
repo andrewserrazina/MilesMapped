@@ -110,6 +110,18 @@ export interface Itinerary {
   notes?: string;
 }
 
+export type CommunicationType = "Email" | "Call" | "Text" | "Other";
+
+export interface CommunicationEntry {
+  id: string;
+  clientId: string;
+  tripId?: string;
+  type: CommunicationType;
+  summary: string;
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface ActivityItem {
   id: string;
   title: string;

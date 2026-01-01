@@ -2,6 +2,7 @@ import type {
   ActivityItem,
   AwardOption,
   Client,
+  CommunicationEntry,
   HotelOption,
   Itinerary,
   KnowledgeArticle,
@@ -341,6 +342,26 @@ export const trips: Trip[] = [
 ];
 
 export const itineraries: Itinerary[] = [];
+
+export const communicationEntries: CommunicationEntry[] = [
+  {
+    id: "comm_001",
+    clientId: "client_001",
+    tripId: "trip_001",
+    type: "Email",
+    summary: "Sent draft award comparison to review.",
+    createdAt: "2024-08-19T14:30:00.000Z",
+    createdBy: "Admin",
+  },
+  {
+    id: "comm_002",
+    clientId: "client_002",
+    type: "Call",
+    summary: "Completed intake call; confirmed flexible dates.",
+    createdAt: "2024-08-12T18:05:00.000Z",
+    createdBy: "Agent A",
+  },
+];
 
 export const activities: ActivityItem[] = [
   {

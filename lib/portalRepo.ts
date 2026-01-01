@@ -9,6 +9,7 @@ import type {
 import {
   addAwardOption,
   addClient,
+  addCommunicationEntry,
   addItinerary,
   addTrip,
   isTripReadOnly,
@@ -59,6 +60,14 @@ export const portalRepo = {
   createItinerary: (itinerary: Itinerary) => {
     addItinerary(itinerary);
     return itinerary;
+  },
+
+  listCommunicationEntries: (data?: PortalData | null) =>
+    data?.communicationEntries ?? [],
+  createCommunicationEntry: (
+    entry: Parameters<typeof addCommunicationEntry>[0]
+  ) => {
+    addCommunicationEntry(entry);
   },
 
   getAwardSearchIntegrations: (data?: PortalData | null) =>
