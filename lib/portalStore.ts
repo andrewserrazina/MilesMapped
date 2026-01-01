@@ -7,6 +7,7 @@ import type {
   AwardOption,
   AwardSearchIntegrationsSettings,
   Client,
+  CommunicationEntry,
   Itinerary,
   KnowledgeArticle,
   Trip,
@@ -21,6 +22,7 @@ export interface PortalData {
   clients: typeof clients;
   trips: Trip[];
   itineraries: Itinerary[];
+  communicationEntries: CommunicationEntry[];
   awardSearchIntegrations: AwardSearchIntegrationsSettings;
   knowledgeArticles: KnowledgeArticle[];
 }
@@ -43,6 +45,7 @@ const defaultPortalData: PortalData = {
   clients,
   trips,
   itineraries,
+  communicationEntries: [],
   awardSearchIntegrations: defaultAwardSearchIntegrations,
   knowledgeArticles,
 };
@@ -106,6 +109,8 @@ function isPortalData(value: unknown): value is PortalData {
     Array.isArray((value as PortalData).clients) &&
     Array.isArray((value as PortalData).trips) &&
     Array.isArray((value as PortalData).itineraries) &&
+    (!("communicationEntries" in value) ||
+      Array.isArray((value as PortalData).communicationEntries)) &&
     Array.isArray((value as PortalData).knowledgeArticles)
   );
 }
@@ -131,6 +136,7 @@ function normalizePortalData(data: PortalData): PortalData {
     ...data,
     schemaVersion: SCHEMA_VERSION,
     trips: data.trips.map((trip) => normalizeTrip(trip)),
+    communicationEntries: data.communicationEntries ?? [],
     awardSearchIntegrations: {
       pointMe: {
         ...defaultAwardSearchIntegrations.pointMe,
