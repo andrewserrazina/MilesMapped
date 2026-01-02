@@ -641,6 +641,28 @@ export function addItinerary(itinerary: Itinerary) {
   });
 }
 
+export function updateItinerary(
+  itineraryId: string,
+  updater: (itinerary: Itinerary) => Itinerary
+) {
+  setPortalData((previous) => {
+    const itinerary = previous.itineraries.find(
+      (item) => item.id === itineraryId
+    );
+    if (!itinerary) {
+      return previous;
+    }
+
+    const updatedItinerary = updater(itinerary);
+    return {
+      ...previous,
+      itineraries: previous.itineraries.map((item) =>
+        item.id === itineraryId ? updatedItinerary : item
+      ),
+    };
+  });
+}
+
 export function addClient(client: Client) {
   setPortalData((previous) => {
     const nextData = {
