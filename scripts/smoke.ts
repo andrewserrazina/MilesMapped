@@ -12,7 +12,7 @@ import {
 } from "@/lib/sop/rules";
 
 const seedPortalData: PortalData = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   clients,
   trips,
   itineraries,
@@ -30,6 +30,7 @@ const seedPortalData: PortalData = {
     },
   },
   knowledgeArticles,
+  auditLog: [],
 };
 
 function assert(condition: boolean, message: string) {
