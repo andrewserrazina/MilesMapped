@@ -10,7 +10,7 @@ const bytesToBase64Url = (bytes: Uint8Array) => {
 };
 
 export const generateShareToken = () => {
-  const cryptoApi = globalThis.crypto;
+  const cryptoApi: Crypto | undefined = globalThis.crypto;
 
   if (!cryptoApi) {
     throw new Error("Crypto unavailable for share token generation.");
