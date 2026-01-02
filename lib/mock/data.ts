@@ -258,6 +258,71 @@ Star Alliance, LifeMiles, Europe`,
     tags: ["LifeMiles", "Star Alliance", "Europe"],
     createdAt: "2024-10-05",
   },
+  {
+    id: "kb_007",
+    title: "How to Use MilesMapped Portal (Agent SOP)",
+    category: "SOPs",
+    content: `# How to Use MilesMapped Portal (Agent SOP)
+
+Use this step-by-step flow to move a client trip from intake to closure.
+
+## 1) Client
+- Create or open the client profile.
+- Confirm contact details, points balances, and preferences.
+- **Screenshot placeholder:** Client overview with balances and notes.
+
+## 2) Trip
+- Create a new trip for the client.
+- Confirm route, dates, cabin, and passenger count.
+- **Screenshot placeholder:** Trip creation form with key fields.
+
+## 3) Intake
+- Complete the intake checklist.
+- Document budget notes and document requirements.
+- **Screenshot placeholder:** Intake checklist completion state.
+
+## 4) Searching
+- Begin award search and log sources.
+- Validate real availability before moving forward.
+- **Screenshot placeholder:** Search status with award sources.
+
+## 5) Award Options
+- Add award options with mileage, fees, and transfer time.
+- Include notes and screenshots of availability when possible.
+- **Screenshot placeholder:** Award options list with notes.
+
+## 6) Pin
+- Pin the best award option for the primary itinerary.
+- Confirm it is fully bookable before proceeding.
+- **Screenshot placeholder:** Pinned award option highlight.
+
+## 7) Draft Ready
+- Mark trip as Draft Ready after all options are reviewed.
+- Prepare draft itinerary notes for the client.
+- **Screenshot placeholder:** Trip header showing Draft Ready.
+
+## 8) Itinerary
+- Generate the itinerary once pinned options are set.
+- Include backup options and client-ready notes.
+- **Screenshot placeholder:** Generated itinerary summary.
+
+## 9) Sent
+- Send the itinerary to the client and log the communication.
+- Confirm the client understands transfer steps.
+- **Screenshot placeholder:** Sent status with communication log.
+
+## 10) Booked
+- Mark as Booked once ticketed.
+- Capture confirmation numbers and deadlines.
+- **Screenshot placeholder:** Booked status with booking metadata.
+
+## 11) Closed
+- Close the trip after travel is complete.
+- Add final notes and outcomes for future reference.
+- **Screenshot placeholder:** Closed status summary.`,
+    tags: ["SOP", "Onboarding", "Workflow"],
+    createdAt: "2024-11-18",
+  },
 ];
 
 export const trips: Trip[] = [

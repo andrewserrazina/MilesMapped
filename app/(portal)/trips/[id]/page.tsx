@@ -83,6 +83,7 @@ export default function TripDetailPage() {
   const knowledgeBaseHref = relevantProgram
     ? `/kb?query=${encodeURIComponent(relevantProgram)}`
     : "/kb";
+  const sopArticleHref = "/kb/kb_007";
   const hasCashEquivalent = Boolean(
     trip?.awardOptions.some((option) => option.cashEquivalentUSD !== undefined)
   );
@@ -368,6 +369,7 @@ export default function TripDetailPage() {
         statusOptions={tripStatusOrder}
         assignedAgentName={trip.assignedAgentName}
         agentOptions={agentOptions}
+        sopLinkHref={sopArticleHref}
         onStatusChange={(nextStatus: TripStatus) =>
           portalRepo.updateTrip(trip.id, (current) => {
             if (!canEditTrip) {
