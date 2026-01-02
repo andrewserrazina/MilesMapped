@@ -662,7 +662,6 @@ export const supabaseRepo = {
     }, [
       base.data?.clients,
       base.data?.trips,
-      isSupabaseConfigured,
       supabaseSnapshot.isHydrated,
     ]);
 
