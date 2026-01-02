@@ -4,6 +4,9 @@ import { useEffect, useSyncExternalStore } from "react";
 import { clients, itineraries, knowledgeArticles, trips } from "@/lib/mock/data";
 import { resetPortalStorage } from "@/lib/storage";
 import type {
+  AuditLogAction,
+  AuditLogEntry,
+  AuditLogTargetType,
   AwardOption,
   AwardSearchIntegrationsSettings,
   Client,
@@ -16,7 +19,7 @@ import { defaultTripIntake } from "@/lib/types";
 import { logError } from "@/lib/log";
 
 const STORAGE_KEY = "milesmapped.portalData";
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 export interface PortalData {
   schemaVersion: number;
@@ -26,6 +29,7 @@ export interface PortalData {
   communicationEntries: CommunicationEntry[];
   awardSearchIntegrations: AwardSearchIntegrationsSettings;
   knowledgeArticles: KnowledgeArticle[];
+  auditLog: AuditLogEntry[];
 }
 
 const defaultAwardSearchIntegrations: AwardSearchIntegrationsSettings = {
@@ -49,6 +53,7 @@ const defaultPortalData: PortalData = {
   communicationEntries: [],
   awardSearchIntegrations: defaultAwardSearchIntegrations,
   knowledgeArticles,
+  auditLog: [],
 };
 
 let portalDataState: PortalData = defaultPortalData;
@@ -106,13 +111,14 @@ function isPortalData(value: unknown): value is PortalData {
     "trips" in value &&
     "itineraries" in value &&
     "knowledgeArticles" in value &&
-    (value as PortalData).schemaVersion === SCHEMA_VERSION &&
+    typeof (value as PortalData).schemaVersion === "number" &&
     Array.isArray((value as PortalData).clients) &&
     Array.isArray((value as PortalData).trips) &&
     Array.isArray((value as PortalData).itineraries) &&
     (!("communicationEntries" in value) ||
       Array.isArray((value as PortalData).communicationEntries)) &&
-    Array.isArray((value as PortalData).knowledgeArticles)
+    Array.isArray((value as PortalData).knowledgeArticles) &&
+    (!("auditLog" in value) || Array.isArray((value as PortalData).auditLog))
   );
 }
 
@@ -138,6 +144,7 @@ function normalizePortalData(data: PortalData): PortalData {
     schemaVersion: SCHEMA_VERSION,
     trips: data.trips.map((trip) => normalizeTrip(trip)),
     communicationEntries: data.communicationEntries ?? [],
+    auditLog: data.auditLog ?? [],
     awardSearchIntegrations: {
       pointMe: {
         ...defaultAwardSearchIntegrations.pointMe,
@@ -159,6 +166,71 @@ function createId(prefix: string) {
   }
 
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+}
+
+type AuditActor = {
+  name: string;
+  role: string;
+};
+
+const defaultAuditActor: AuditActor = {
+  name: "Admin",
+  role: "admin",
+};
+
+function createAuditEntry({
+  action,
+  targetType,
+  targetId,
+  metadata = {},
+  actor = defaultAuditActor,
+}: {
+  action: AuditLogAction;
+  targetType: AuditLogTargetType;
+  targetId: string;
+  metadata?: Record<string, unknown>;
+  actor?: AuditActor;
+}): AuditLogEntry {
+  return {
+    id: createId("audit"),
+    actorName: actor.name,
+    actorRole: actor.role,
+    action,
+    targetType,
+    targetId,
+    timestamp: new Date().toISOString(),
+    metadata,
+  };
+}
+
+function appendAuditEntries(
+  data: PortalData,
+  entries: AuditLogEntry[]
+): PortalData {
+  if (!entries.length) {
+    return data;
+  }
+  return {
+    ...data,
+    auditLog: [...entries, ...data.auditLog],
+  };
+}
+
+function hasBalancesChanged(previous: Client, next: Client) {
+  return JSON.stringify(previous.balances) !== JSON.stringify(next.balances);
+}
+
+function getStatusAuditAction(status: Trip["status"]): AuditLogAction {
+  switch (status) {
+    case "Sent":
+      return "TripMarkedSent";
+    case "Booked":
+      return "TripMarkedBooked";
+    case "Closed":
+      return "TripMarkedClosed";
+    default:
+      return "TripStatusUpdated";
+  }
 }
 
 function buildSampleTrips(availableClients: Client[]): Trip[] {
@@ -379,7 +451,16 @@ export function resetPortalData() {
   }
 
   resetPortalStorage();
-  portalDataState = normalizePortalData(defaultPortalData);
+  const resetEntry = createAuditEntry({
+    action: "DemoDataReset",
+    targetType: "Task",
+    targetId: "demo-data",
+    metadata: {},
+  });
+  portalDataState = appendAuditEntries(
+    normalizePortalData(defaultPortalData),
+    [resetEntry]
+  );
   persist(portalDataState);
   isHydratedState = true;
   snapshotState = { data: portalDataState, isHydrated: isHydratedState };
@@ -409,12 +490,27 @@ export function updateTrip(tripId: string, updater: (trip: Trip) => Trip) {
     }
 
     const updatedTrip = normalizeTrip(updater(trip));
-    return {
+    const nextData = {
       ...previous,
       trips: previous.trips.map((item) =>
         item.id === tripId ? updatedTrip : item
       ),
     };
+
+    if (trip.status !== updatedTrip.status) {
+      const entry = createAuditEntry({
+        action: getStatusAuditAction(updatedTrip.status),
+        targetType: "Trip",
+        targetId: tripId,
+        metadata: {
+          previousStatus: trip.status,
+          nextStatus: updatedTrip.status,
+        },
+      });
+      return appendAuditEntries(nextData, [entry]);
+    }
+
+    return nextData;
   });
 }
 
@@ -429,12 +525,38 @@ export function updateClient(
     }
 
     const updatedClient = updater(client);
-    return {
+    const nextData = {
       ...previous,
       clients: previous.clients.map((item) =>
         item.id === clientId ? updatedClient : item
       ),
     };
+
+    const entries: AuditLogEntry[] = [];
+    entries.push(
+      createAuditEntry({
+        action: "ClientUpdated",
+        targetType: "Client",
+        targetId: clientId,
+        metadata: {},
+      })
+    );
+
+    if (hasBalancesChanged(client, updatedClient)) {
+      entries.push(
+        createAuditEntry({
+          action: "ClientBalancesUpdated",
+          targetType: "Balance",
+          targetId: clientId,
+          metadata: {
+            previousBalances: client.balances,
+            nextBalances: updatedClient.balances,
+          },
+        })
+      );
+    }
+
+    return appendAuditEntries(nextData, entries);
   });
 }
 
@@ -466,37 +588,91 @@ export function removeAwardOption(tripId: string, optionId: string) {
 }
 
 export function setPinnedAwardOption(tripId: string, optionId: string) {
-  updateTrip(tripId, (trip) => {
+  setPortalData((previous) => {
+    const trip = previous.trips.find((item) => item.id === tripId);
+    if (!trip || isTripReadOnly(trip)) {
+      return previous;
+    }
     const exists = trip.awardOptions.some((option) => option.id === optionId);
     if (!exists) {
-      return trip;
+      return previous;
     }
-    return {
+    if (trip.pinnedAwardOptionId === optionId) {
+      return previous;
+    }
+
+    const updatedTrip = {
       ...trip,
       pinnedAwardOptionId: optionId,
     };
+    const nextData = {
+      ...previous,
+      trips: previous.trips.map((item) =>
+        item.id === tripId ? updatedTrip : item
+      ),
+    };
+    const entry = createAuditEntry({
+      action: "AwardOptionPinned",
+      targetType: "Trip",
+      targetId: tripId,
+      metadata: {
+        awardOptionId: optionId,
+      },
+    });
+    return appendAuditEntries(nextData, [entry]);
   });
 }
 
 export function addItinerary(itinerary: Itinerary) {
-  setPortalData((previous) => ({
-    ...previous,
-    itineraries: [itinerary, ...previous.itineraries],
-  }));
+  setPortalData((previous) => {
+    const nextData = {
+      ...previous,
+      itineraries: [itinerary, ...previous.itineraries],
+    };
+    const entry = createAuditEntry({
+      action: "ItineraryGenerated",
+      targetType: "Itinerary",
+      targetId: itinerary.id,
+      metadata: {
+        tripId: itinerary.tripId,
+      },
+    });
+    return appendAuditEntries(nextData, [entry]);
+  });
 }
 
 export function addClient(client: Client) {
-  setPortalData((previous) => ({
-    ...previous,
-    clients: [client, ...previous.clients],
-  }));
+  setPortalData((previous) => {
+    const nextData = {
+      ...previous,
+      clients: [client, ...previous.clients],
+    };
+    const entry = createAuditEntry({
+      action: "ClientCreated",
+      targetType: "Client",
+      targetId: client.id,
+      metadata: {},
+    });
+    return appendAuditEntries(nextData, [entry]);
+  });
 }
 
 export function addTrip(trip: Trip) {
-  setPortalData((previous) => ({
-    ...previous,
-    trips: [normalizeTrip(trip), ...previous.trips],
-  }));
+  setPortalData((previous) => {
+    const nextData = {
+      ...previous,
+      trips: [normalizeTrip(trip), ...previous.trips],
+    };
+    const entry = createAuditEntry({
+      action: "TripCreated",
+      targetType: "Trip",
+      targetId: trip.id,
+      metadata: {
+        status: trip.status,
+      },
+    });
+    return appendAuditEntries(nextData, [entry]);
+  });
 }
 
 export function addKnowledgeArticle(article: KnowledgeArticle) {
@@ -533,6 +709,17 @@ export function addCommunicationEntry(entry: CommunicationEntry) {
     ...previous,
     communicationEntries: [entry, ...previous.communicationEntries],
   }));
+}
+
+export function clearAuditLog(actor: AuditActor) {
+  if (actor.role.toLowerCase() !== "admin") {
+    return false;
+  }
+  setPortalData((previous) => ({
+    ...previous,
+    auditLog: [],
+  }));
+  return true;
 }
 
 type AwardSearchIntegrationsPatch = Partial<{

@@ -124,6 +124,15 @@ export const supabaseRepo = {
     return notImplementedError();
   },
 
+  listAuditLog: (data?: PortalData | null) =>
+    // TODO: Replace with Supabase SELECT on audit log.
+    notImplementedValue(data?.auditLog ?? []),
+  clearAuditLog: (_actor: { name: string; role: string }) => {
+    // TODO: Replace with Supabase DELETE for audit log (admin-only).
+    markUnused(_actor);
+    return notImplementedError();
+  },
+
   getAwardSearchIntegrations: (data?: PortalData | null) =>
     // TODO: Replace with Supabase SELECT for integrations.
     notImplementedValue(data?.awardSearchIntegrations ?? null),
