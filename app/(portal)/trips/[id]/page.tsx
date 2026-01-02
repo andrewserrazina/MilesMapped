@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildAwardSearchUrl } from "@/lib/awardSearchLinks";
 import { tripStatusOrder } from "@/lib/mock/data";
+import { logError } from "@/lib/log";
 import { portalRepo } from "@/lib/portalRepo";
 import {
   countCompletedIntake,
@@ -352,7 +353,7 @@ export default function TripDetailPage() {
       await navigator.clipboard.writeText(awardSearchMessage.url);
       setCopyStatus("copied");
     } catch (error) {
-      console.error("Failed to copy award search URL", error);
+      logError("Failed to copy award search URL", error);
       setCopyStatus("error");
     }
   };

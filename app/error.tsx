@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { logError } from "@/lib/log";
 import { cn } from "@/lib/utils";
 
 export default function GlobalError({
@@ -13,7 +14,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    logError(error);
   }, [error]);
 
   return (

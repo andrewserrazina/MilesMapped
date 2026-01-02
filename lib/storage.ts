@@ -5,6 +5,7 @@ import type {
   Itinerary,
   Trip,
 } from "@/lib/types";
+import { logError } from "@/lib/log";
 
 const STORAGE_KEY = "milesmapped.portalData";
 const SCHEMA_VERSION = 1;
@@ -101,7 +102,7 @@ function readFromStorage(): PortalData | null {
     }
     return ensureSchemaVersion(parsed);
   } catch (error) {
-    console.error("Failed to parse portal data", error);
+    logError("Failed to parse portal data", error);
     return null;
   }
 }

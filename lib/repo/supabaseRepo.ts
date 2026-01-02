@@ -10,6 +10,7 @@ import type {
   Trip,
 } from "@/lib/types";
 import { isTripReadOnly, usePortalData, type PortalData } from "@/lib/portalStore";
+import { logWarn } from "@/lib/log";
 
 const supabaseWarning =
   "Supabase mode enabled but not configured yet.";
@@ -21,7 +22,7 @@ const warnNotImplemented = (() => {
       return;
     }
     warned = true;
-    console.warn(supabaseWarning);
+    logWarn(supabaseWarning);
   };
 })();
 
