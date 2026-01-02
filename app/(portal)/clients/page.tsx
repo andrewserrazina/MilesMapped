@@ -30,6 +30,18 @@ export default function ClientsPage() {
   const canCreateClient = can(currentUser, "client.create");
   const clients = portalRepo.listClients(portalData);
   const trips = portalRepo.listTrips(portalData);
+  const tripCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    trips.forEach((trip) => {
+      counts.set(trip.clientId, (counts.get(trip.clientId) ?? 0) + 1);
+    });
+    return counts;
+  }, [trips]);
+  const statusSortOrder: Record<Client["status"], number> = {
+    Lead: 0,
+    Active: 1,
+    Completed: 2,
+  };
 
   const filteredClients = useMemo(() => {
     return clients.filter((client) => {
@@ -139,6 +151,7 @@ export default function ClientsPage() {
                   <p className="text-xs text-slate-500">{client.email}</p>
                 </div>
               ),
+              sortValue: (client: Client) => client.fullName,
             },
             {
               key: "status",
@@ -146,15 +159,17 @@ export default function ClientsPage() {
               render: (client: Client) => (
                 <span className="text-sm text-slate-600">{client.status}</span>
               ),
+              sortValue: (client: Client) => statusSortOrder[client.status],
             },
             {
               key: "trips",
               header: "Trips",
               render: (client: Client) => (
                 <span className="text-sm text-slate-600">
-                  {trips.filter((trip) => trip.clientId === client.id).length}
+                  {tripCounts.get(client.id) ?? 0}
                 </span>
               ),
+              sortValue: (client: Client) => tripCounts.get(client.id) ?? 0,
             },
             {
               key: "agent",
@@ -164,6 +179,7 @@ export default function ClientsPage() {
                   {client.assignedAgentName}
                 </span>
               ),
+              sortValue: (client: Client) => client.assignedAgentName,
             },
           ]}
           data={filteredClients}

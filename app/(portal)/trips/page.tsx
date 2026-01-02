@@ -33,6 +33,13 @@ export default function TripsPage() {
   const canCreateTrip = can(currentUser, "trip.create");
   const trips = portalRepo.listTrips(portalData);
   const clients = portalRepo.listClients(portalData);
+  const clientsById = useMemo(() => {
+    const map = new Map<string, string>();
+    clients.forEach((client) => {
+      map.set(client.id, client.fullName);
+    });
+    return map;
+  }, [clients]);
 
   const filteredTrips = useMemo(() => {
     return trips.filter((trip) => {
@@ -165,16 +172,20 @@ export default function TripsPage() {
               key: "client",
               header: "Client",
               render: (trip: Trip) => {
-                const client = portalRepo.getClient(portalData, trip.clientId);
+                const clientName =
+                  clientsById.get(trip.clientId) ??
+                  portalRepo.getClient(portalData, trip.clientId)?.fullName;
                 return (
                   <div>
-                    <p className="font-semibold text-slate-900">
-                      {client?.fullName}
-                    </p>
+                    <p className="font-semibold text-slate-900">{clientName}</p>
                     <p className="text-xs text-slate-500">{trip.title}</p>
                   </div>
                 );
               },
+              sortValue: (trip: Trip) =>
+                clientsById.get(trip.clientId) ??
+                portalRepo.getClient(portalData, trip.clientId)?.fullName ??
+                "",
             },
             {
               key: "route",
@@ -184,6 +195,7 @@ export default function TripsPage() {
                   {trip.origin} → {trip.destination}
                 </span>
               ),
+              sortValue: (trip: Trip) => `${trip.origin} ${trip.destination}`,
             },
             {
               key: "dates",
@@ -193,11 +205,13 @@ export default function TripsPage() {
                   {trip.dateStart} → {trip.dateEnd}
                 </span>
               ),
+              sortValue: (trip: Trip) => new Date(trip.dateStart).getTime(),
             },
             {
               key: "status",
               header: "Status",
               render: (trip: Trip) => <StatusBadge status={trip.status} />,
+              sortValue: (trip: Trip) => tripStatusOrder.indexOf(trip.status),
             },
           ]}
           data={filteredTrips}
