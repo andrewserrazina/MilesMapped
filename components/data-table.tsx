@@ -30,19 +30,12 @@ export default function DataTable<T>({
   onRowClick?: (row: T) => void;
   pageSize?: number;
 }) {
-  if (!data.length) {
-    return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
-        {emptyMessage}
-      </div>
-    );
-  }
-
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "asc" | "desc";
   } | null>(null);
   const [page, setPage] = useState(1);
+  const hasData = data.length > 0;
 
   const sortedData = useMemo(() => {
     if (!sortConfig) {
@@ -97,6 +90,14 @@ export default function DataTable<T>({
       };
     });
   };
+
+  if (!hasData) {
+    return (
+      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
