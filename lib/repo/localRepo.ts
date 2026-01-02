@@ -15,6 +15,7 @@ import {
   addItinerary,
   addKnowledgeArticle,
   addTrip,
+  clearAuditLog,
   isTripReadOnly,
   removeAwardOption,
   setPinnedAwardOption,
@@ -91,6 +92,10 @@ export const localRepo = {
     addCommunicationEntry(entry);
     return entry;
   },
+
+  listAuditLog: (data?: PortalData | null) => data?.auditLog ?? [],
+  clearAuditLog: (actor: { name: string; role: string }) =>
+    clearAuditLog(actor),
 
   getAwardSearchIntegrations: (data?: PortalData | null) =>
     data?.awardSearchIntegrations ?? null,

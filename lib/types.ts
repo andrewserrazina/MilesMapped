@@ -37,6 +37,37 @@ export interface Client {
   createdAt: string;
 }
 
+export type AuditLogAction =
+  | "ClientCreated"
+  | "ClientUpdated"
+  | "ClientBalancesUpdated"
+  | "TripCreated"
+  | "TripStatusUpdated"
+  | "TripMarkedSent"
+  | "TripMarkedBooked"
+  | "TripMarkedClosed"
+  | "AwardOptionPinned"
+  | "ItineraryGenerated"
+  | "DemoDataReset";
+
+export type AuditLogTargetType =
+  | "Client"
+  | "Trip"
+  | "Itinerary"
+  | "Task"
+  | "Balance";
+
+export interface AuditLogEntry {
+  id: string;
+  actorName: string;
+  actorRole: string;
+  action: AuditLogAction;
+  targetType: AuditLogTargetType;
+  targetId: string;
+  timestamp: string;
+  metadata: Record<string, unknown>;
+}
+
 export interface AwardOption {
   id: string;
   tripId: string;
