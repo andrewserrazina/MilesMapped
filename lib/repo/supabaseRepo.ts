@@ -385,7 +385,7 @@ const hydrateSupabaseState = async () => {
     clients
   );
 
-  setSupabaseState({ clients, trips, isHydrated: true });
+  setSupabaseState((prev) => ({ ...prev, clients, trips, isHydrated: true }));
 };
 
 const updateTripState = (tripId: string, updater: (trip: Trip) => Trip) => {
