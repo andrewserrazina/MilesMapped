@@ -248,7 +248,7 @@ export default function TripDetailPage() {
     createdAt: new Date().toISOString(),
   });
 
-  const handleSaveAwardOption = (values: AwardOptionFormOutput) => {
+  const handleSaveAwardOption = async (values: AwardOptionFormOutput) => {
     if (!trip) {
       return;
     }
@@ -256,9 +256,17 @@ export default function TripDetailPage() {
       return;
     }
 
+    let shouldClose = true;
     if (awardModalState.mode === "add") {
       const created = buildAwardOption(values);
-      portalRepo.addAwardOption(trip.id, created);
+      try {
+        await portalRepo.addAwardOption(trip.id, created);
+        setNewlyAddedOptionId(created.id);
+      } catch (error) {
+        logError("Failed to add award option", error);
+        setToastMessage("Failed to add award option. Please try again.");
+        shouldClose = false;
+      }
     } else if (awardModalState.option) {
       portalRepo.updateAwardOption(trip.id, awardModalState.option.id, {
         program: values.program,
@@ -271,10 +279,12 @@ export default function TripDetailPage() {
         badges: values.badges,
       });
     }
-    setAwardModalState({ open: false, mode: "add", option: null });
+    if (shouldClose) {
+      setAwardModalState({ open: false, mode: "add", option: null });
+    }
   };
 
-  const handleImportAwardOption = (values: AwardOptionFormOutput) => {
+  const handleImportAwardOption = async (values: AwardOptionFormOutput) => {
     if (!trip) {
       return;
     }
@@ -283,10 +293,15 @@ export default function TripDetailPage() {
     }
 
     const created = buildAwardOption(values);
-    portalRepo.addAwardOption(trip.id, created);
-    setImportModalOpen(false);
-    setToastMessage("Award option imported.");
-    setNewlyAddedOptionId(created.id);
+    try {
+      await portalRepo.addAwardOption(trip.id, created);
+      setImportModalOpen(false);
+      setToastMessage("Award option imported.");
+      setNewlyAddedOptionId(created.id);
+    } catch (error) {
+      logError("Failed to import award option", error);
+      setToastMessage("Failed to import award option. Please try again.");
+    }
   };
 
   const handleRemoveAwardOption = (option: AwardOption) => {

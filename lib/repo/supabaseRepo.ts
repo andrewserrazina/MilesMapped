@@ -687,7 +687,8 @@ export const supabaseRepo = {
     };
   },
   isTripReadOnly,
-  addAwardOption: (tripId: string, option: AwardOption) => {
+  addAwardOption: async (tripId: string, option: AwardOption) => {
+    const previousTrip = supabaseState.trips.find((trip) => trip.id === tripId);
     const updatedTrip = updateTripState(tripId, (trip) => ({
       ...trip,
       awardOptions: [{ ...option, tripId }, ...trip.awardOptions],
@@ -697,14 +698,22 @@ export const supabaseRepo = {
       return;
     }
 
-    void supabase
+    const { error } = await supabase
       .from("award_options")
-      .insert(toAwardOptionInsert(tripId, option))
-      .then(({ error }) => {
-        if (error) {
-          logError("Failed to add award option", error);
-        }
-      });
+      .insert(toAwardOptionInsert(tripId, option));
+
+    if (error) {
+      logError("Failed to add award option", error);
+      if (previousTrip) {
+        setSupabaseState((prev) => ({
+          ...prev,
+          trips: prev.trips.map((trip) =>
+            trip.id === tripId ? previousTrip : trip
+          ),
+        }));
+      }
+      throw error;
+    }
   },
   updateAwardOption: (
     tripId: string,

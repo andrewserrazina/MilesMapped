@@ -9,7 +9,7 @@ import type {
   Trip,
 } from "@/lib/types";
 import {
-  addAwardOption,
+  addAwardOption as addAwardOptionToStore,
   addClient,
   addCommunicationEntry,
   addItinerary,
@@ -122,7 +122,9 @@ export const localRepo = {
 
   usePortalData,
   isTripReadOnly,
-  addAwardOption,
+  addAwardOption: async (tripId: string, option: Trip["awardOptions"][number]) => {
+    addAwardOptionToStore(tripId, option);
+  },
   updateAwardOption,
   removeAwardOption,
   setPinnedAwardOption,
