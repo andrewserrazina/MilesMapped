@@ -35,6 +35,10 @@ const notImplementedValue = <T,>(fallback: T): T => {
   return fallback;
 };
 
+const markUnused = (..._args: unknown[]) => {
+  void _args;
+};
+
 export const supabaseRepo = {
   dataMode: "supabase" as const,
   isSupabaseConfigured: false,
@@ -46,12 +50,16 @@ export const supabaseRepo = {
   getClient: (data: PortalData | null | undefined, id: string) =>
     // TODO: Replace with Supabase SELECT by id.
     notImplementedValue(data?.clients.find((client) => client.id === id) ?? null),
-  createClient: (_client: Client) =>
+  createClient: (_client: Client) => {
     // TODO: Replace with Supabase INSERT for clients.
-    notImplementedError(),
-  updateClient: (_clientId: string, _updater: (client: Client) => Client) =>
+    markUnused(_client);
+    return notImplementedError();
+  },
+  updateClient: (_clientId: string, _updater: (client: Client) => Client) => {
     // TODO: Replace with Supabase UPDATE for clients.
-    notImplementedError(),
+    markUnused(_clientId, _updater);
+    return notImplementedError();
+  },
 
   listTrips: (data?: PortalData | null) =>
     // TODO: Replace with Supabase SELECT on trips.
@@ -59,12 +67,16 @@ export const supabaseRepo = {
   getTrip: (data: PortalData | null | undefined, id: string) =>
     // TODO: Replace with Supabase SELECT by id.
     notImplementedValue(data?.trips.find((trip) => trip.id === id) ?? null),
-  createTrip: (_trip: Trip) =>
+  createTrip: (_trip: Trip) => {
     // TODO: Replace with Supabase INSERT for trips.
-    notImplementedError(),
-  updateTrip: (_tripId: string, _updater: (trip: Trip) => Trip) =>
+    markUnused(_trip);
+    return notImplementedError();
+  },
+  updateTrip: (_tripId: string, _updater: (trip: Trip) => Trip) => {
     // TODO: Replace with Supabase UPDATE for trips.
-    notImplementedError(),
+    markUnused(_tripId, _updater);
+    return notImplementedError();
+  },
 
   listItineraries: (data?: PortalData | null) =>
     // TODO: Replace with Supabase SELECT on itineraries.
@@ -74,9 +86,11 @@ export const supabaseRepo = {
     notImplementedValue(
       data?.itineraries.find((itinerary) => itinerary.id === id) ?? null
     ),
-  createItinerary: (_itinerary: Itinerary) =>
+  createItinerary: (_itinerary: Itinerary) => {
     // TODO: Replace with Supabase INSERT for itineraries.
-    notImplementedError(),
+    markUnused(_itinerary);
+    return notImplementedError();
+  },
 
   listKnowledgeArticles: (data?: PortalData | null) =>
     // TODO: Replace with Supabase SELECT on knowledge articles.
@@ -86,22 +100,28 @@ export const supabaseRepo = {
     notImplementedValue(
       data?.knowledgeArticles.find((article) => article.id === id) ?? null
     ),
-  createKnowledgeArticle: (_article: KnowledgeArticle) =>
+  createKnowledgeArticle: (_article: KnowledgeArticle) => {
     // TODO: Replace with Supabase INSERT for knowledge articles.
-    notImplementedError(),
+    markUnused(_article);
+    return notImplementedError();
+  },
   updateKnowledgeArticle: (
     _articleId: string,
     _updater: (article: KnowledgeArticle) => KnowledgeArticle
-  ) =>
+  ) => {
     // TODO: Replace with Supabase UPDATE for knowledge articles.
-    notImplementedError(),
+    markUnused(_articleId, _updater);
+    return notImplementedError();
+  },
 
   listCommunicationEntries: (data?: PortalData | null) =>
     // TODO: Replace with Supabase SELECT on communication entries.
     notImplementedValue(data?.communicationEntries ?? []),
-  createCommunicationEntry: (_entry: CommunicationEntry) =>
+  createCommunicationEntry: (_entry: CommunicationEntry) => {
     // TODO: Replace with Supabase INSERT for communication entries.
-    notImplementedError(),
+    markUnused(_entry);
+    return notImplementedError();
+  },
 
   getAwardSearchIntegrations: (data?: PortalData | null) =>
     // TODO: Replace with Supabase SELECT for integrations.
@@ -111,21 +131,32 @@ export const supabaseRepo = {
       pointMe: Partial<AwardSearchIntegrationsSettings["pointMe"]>;
       roame: Partial<AwardSearchIntegrationsSettings["roame"]>;
     }>
-  ) =>
+  ) => {
     // TODO: Replace with Supabase UPDATE for integrations.
-    notImplementedError(),
+    markUnused(_patch);
+    return notImplementedError();
+  },
 
   usePortalData,
   isTripReadOnly,
-  addAwardOption: (_tripId: string, _option: AwardOption) =>
-    notImplementedError(),
+  addAwardOption: (_tripId: string, _option: AwardOption) => {
+    markUnused(_tripId, _option);
+    return notImplementedError();
+  },
   updateAwardOption: (
     _tripId: string,
     _optionId: string,
     _patch: Partial<AwardOption>
-  ) => notImplementedError(),
-  removeAwardOption: (_tripId: string, _optionId: string) =>
-    notImplementedError(),
-  setPinnedAwardOption: (_tripId: string, _optionId: string) =>
-    notImplementedError(),
+  ) => {
+    markUnused(_tripId, _optionId, _patch);
+    return notImplementedError();
+  },
+  removeAwardOption: (_tripId: string, _optionId: string) => {
+    markUnused(_tripId, _optionId);
+    return notImplementedError();
+  },
+  setPinnedAwardOption: (_tripId: string, _optionId: string) => {
+    markUnused(_tripId, _optionId);
+    return notImplementedError();
+  },
 };
