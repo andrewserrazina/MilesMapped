@@ -25,6 +25,7 @@ export default function TripHeader({
   assignedAgentHelperText,
   isReadOnly,
   actionButtons,
+  sopLinkHref,
 }: {
   title: string;
   status: TripStatus;
@@ -43,6 +44,7 @@ export default function TripHeader({
   assignedAgentHelperText?: string;
   isReadOnly: boolean;
   actionButtons?: ReactNode;
+  sopLinkHref?: string;
 }) {
   return (
     <div className="space-y-4">
@@ -54,6 +56,17 @@ export default function TripHeader({
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
             <StatusBadge status={status} />
+            {sopLinkHref ? (
+              <Link
+                href={sopLinkHref}
+                className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-700"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-[11px] font-semibold text-slate-500">
+                  ?
+                </span>
+                SOP
+              </Link>
+            ) : null}
           </div>
         </div>
         <div className="flex flex-wrap items-end gap-3">
