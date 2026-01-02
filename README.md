@@ -96,6 +96,17 @@ Typed models live in `lib/types.ts` and mock data in `lib/mock/data.ts`.
 - `Trip` holds workflow status and options.
 - `AwardOption` / `HotelOption` provide the comparison layer.
 
+## Supabase Schema Notes
+
+The initial migration in `supabase/migrations/001_init.sql` adds
+`assigned_agent_id` to `clients` and `trips` to anchor permissions to
+`profiles.id`. The UI/types currently use `assignedAgentName`; plan to map by:
+
+1. Backfilling `assigned_agent_id` by matching existing agent names to
+   `profiles.name` or `profiles.email`.
+2. Updating TypeScript to prefer `assignedAgentId` (uuid) while hydrating
+   display names via a join to `profiles`.
+
 ## Status Logic
 
 Trip lifecycle is status-driven:
