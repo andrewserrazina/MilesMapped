@@ -13,6 +13,7 @@ import type {
   Trip,
 } from "@/lib/types";
 import { defaultTripIntake } from "@/lib/types";
+import { logError } from "@/lib/log";
 
 const STORAGE_KEY = "milesmapped.portalData";
 const SCHEMA_VERSION = 2;
@@ -82,7 +83,7 @@ function readFromStorage(): PortalData | null {
     }
     return parsed;
   } catch (error) {
-    console.error("Failed to parse portal data", error);
+    logError("Failed to parse portal data", error);
     return null;
   }
 }
