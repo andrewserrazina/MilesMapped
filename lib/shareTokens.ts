@@ -10,16 +10,18 @@ const bytesToBase64Url = (bytes: Uint8Array) => {
 };
 
 export const generateShareToken = () => {
-  if (typeof crypto === "undefined") {
+  const cryptoApi = globalThis.crypto;
+
+  if (!cryptoApi) {
     throw new Error("Crypto unavailable for share token generation.");
   }
 
-  if ("randomUUID" in crypto) {
-    return crypto.randomUUID().replace(/-/g, "");
+  if ("randomUUID" in cryptoApi) {
+    return cryptoApi.randomUUID().replace(/-/g, "");
   }
 
   const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
+  cryptoApi.getRandomValues(bytes);
   return bytesToBase64Url(bytes);
 };
 
