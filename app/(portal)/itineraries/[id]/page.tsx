@@ -1,17 +1,22 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AwardOption } from "@/lib/types";
+import { logError } from "@/lib/log";
 import { portalRepo } from "@/lib/portalRepo";
+import { buildSharePath, generateShareToken } from "@/lib/shareTokens";
 
 export default function ItineraryDetailPage() {
   const params = useParams<{ id: string }>();
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "error">(
+    "idle"
+  );
 
   const itinerary = portalRepo.getItinerary(portalData, params.id);
   const trip = itinerary
@@ -57,6 +62,41 @@ export default function ItineraryDetailPage() {
     ];
   }, [optionA]);
 
+  const handleCopyShareLink = async () => {
+    if (!itinerary) {
+      return;
+    }
+
+    const token = itinerary.shareToken ?? generateShareToken();
+    if (!itinerary.shareToken) {
+      portalRepo.updateItinerary(itinerary.id, (current) => ({
+        ...current,
+        shareToken: token,
+      }));
+    }
+
+    const sharePath = buildSharePath(token);
+    try {
+      await navigator.clipboard.writeText(sharePath);
+      setShareStatus("copied");
+    } catch (error) {
+      logError("Failed to copy share link", error);
+      setShareStatus("error");
+    }
+  };
+
+  const handleRegenerateShareLink = () => {
+    if (!itinerary) {
+      return;
+    }
+
+    portalRepo.updateItinerary(itinerary.id, (current) => ({
+      ...current,
+      shareToken: generateShareToken(),
+    }));
+    setShareStatus("idle");
+  };
+
   if (!isHydrated) {
     return (
       <div className="space-y-6">
@@ -88,7 +128,30 @@ export default function ItineraryDetailPage() {
         >
           ← Back to Itineraries
         </Link>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {shareStatus !== "idle" ? (
+            <span className="text-xs text-slate-500">
+              {shareStatus === "copied"
+                ? "Share link copied."
+                : "Unable to copy share link."}
+            </span>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCopyShareLink}
+          >
+            Copy Client Share Link
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleRegenerateShareLink}
+          >
+            Regenerate Share Link
+          </Button>
           <Button
             type="button"
             variant="secondary"

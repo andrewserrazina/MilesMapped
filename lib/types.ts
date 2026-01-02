@@ -138,6 +138,7 @@ export interface Itinerary {
   generatedAt: string;
   optionAId: string;
   backupOptionIds: string[];
+  shareToken?: string;
   notes?: string;
 }
 

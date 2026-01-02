@@ -19,6 +19,7 @@ import {
   isTripReadOnly,
   removeAwardOption,
   setPinnedAwardOption,
+  updateItinerary,
   updateAwardSearchIntegrations,
   updateAwardOption,
   updateClient,
@@ -61,9 +62,20 @@ export const localRepo = {
   listItineraries: (data?: PortalData | null) => data?.itineraries ?? [],
   getItinerary: (data: PortalData | null | undefined, id: string) =>
     data?.itineraries.find((itinerary) => itinerary.id === id) ?? null,
+  getItineraryByShareToken: (
+    data: PortalData | null | undefined,
+    token: string
+  ) =>
+    data?.itineraries.find((itinerary) => itinerary.shareToken === token) ?? null,
   createItinerary: (itinerary: Itinerary) => {
     addItinerary(itinerary);
     return itinerary;
+  },
+  updateItinerary: (
+    itineraryId: string,
+    updater: (itinerary: Itinerary) => Itinerary
+  ) => {
+    updateItinerary(itineraryId, updater);
   },
 
   listKnowledgeArticles: (

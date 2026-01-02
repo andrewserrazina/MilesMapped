@@ -87,9 +87,26 @@ export const supabaseRepo = {
     notImplementedValue(
       data?.itineraries.find((itinerary) => itinerary.id === id) ?? null
     ),
+  getItineraryByShareToken: (
+    data: PortalData | null | undefined,
+    token: string
+  ) =>
+    // TODO: Replace with Supabase SELECT by share token.
+    notImplementedValue(
+      data?.itineraries.find((itinerary) => itinerary.shareToken === token) ??
+        null
+    ),
   createItinerary: (_itinerary: Itinerary) => {
     // TODO: Replace with Supabase INSERT for itineraries.
     markUnused(_itinerary);
+    return notImplementedError();
+  },
+  updateItinerary: (
+    _itineraryId: string,
+    _updater: (itinerary: Itinerary) => Itinerary
+  ) => {
+    // TODO: Replace with Supabase UPDATE for itineraries.
+    markUnused(_itineraryId, _updater);
     return notImplementedError();
   },
 

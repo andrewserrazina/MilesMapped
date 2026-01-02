@@ -22,6 +22,7 @@ import { buildAwardSearchUrl } from "@/lib/awardSearchLinks";
 import { tripStatusOrder } from "@/lib/mock/data";
 import { logError } from "@/lib/log";
 import { portalRepo } from "@/lib/portalRepo";
+import { generateShareToken } from "@/lib/shareTokens";
 import {
   countCompletedIntake,
   getItineraryGenerationRule,
@@ -320,6 +321,7 @@ export default function TripDetailPage() {
       generatedAt: new Date().toISOString(),
       optionAId: pinnedOption.id,
       backupOptionIds: backupOptions.map((option) => option.id),
+      shareToken: generateShareToken(),
     };
 
     portalRepo.createItinerary(newItinerary);
