@@ -10,6 +10,7 @@ import type { AwardOption } from "@/lib/types";
 import { logError } from "@/lib/log";
 import { portalRepo } from "@/lib/portalRepo";
 import { buildSharePath, generateShareToken } from "@/lib/shareTokens";
+import { emitEvent } from "@/lib/telemetry/events";
 
 export default function ItineraryDetailPage() {
   const params = useParams<{ id: string }>();
@@ -79,6 +80,10 @@ export default function ItineraryDetailPage() {
     try {
       await navigator.clipboard.writeText(sharePath);
       setShareStatus("copied");
+      emitEvent("share_link_copied", {
+        itineraryId: itinerary.id,
+        tripId: itinerary.tripId,
+      });
     } catch (error) {
       logError("Failed to copy share link", error);
       setShareStatus("error");
@@ -156,7 +161,13 @@ export default function ItineraryDetailPage() {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => window.print()}
+            onClick={() => {
+              emitEvent("export_printed", {
+                itineraryId: itinerary.id,
+                tripId: itinerary.tripId,
+              });
+              window.print();
+            }}
           >
             Export PDF
           </Button>

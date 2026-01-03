@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PageHeader from "@/components/page-header";
 import EmptyState from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,12 @@ import type {
 import { resetPortalData, seedSampleTrips } from "@/lib/portalStore";
 import { useCurrentUser } from "@/lib/auth/mockAuth";
 import { can } from "@/lib/auth/permissions";
+import {
+  buildTelemetryCsv,
+  clearTelemetryEvents,
+  getTelemetryEvents,
+  type TelemetryEvent,
+} from "@/lib/telemetry/events";
 
 export default function SettingsPage() {
   const { data: portalData, isHydrated } = portalRepo.usePortalData();
@@ -47,6 +53,7 @@ export default function SettingsPage() {
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [telemetryEvents, setTelemetryEvents] = useState<TelemetryEvent[]>([]);
 
   const actionOptions = useMemo<AuditLogAction[]>(() => {
     const actions = new Set<AuditLogAction>();
@@ -85,6 +92,18 @@ export default function SettingsPage() {
       return true;
     });
   }, [actionFilter, auditLog, endDate, startDate, targetFilter]);
+
+  const orderedTelemetryEvents = useMemo(
+    () => [...telemetryEvents].reverse(),
+    [telemetryEvents]
+  );
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+    setTelemetryEvents(getTelemetryEvents());
+  }, [isHydrated]);
 
   const handleReset = () => {
     if (!canResetDemo) {
@@ -158,6 +177,34 @@ export default function SettingsPage() {
       name: currentUser.name,
       role: currentUser.role,
     });
+  };
+
+  const handleExportTelemetry = () => {
+    const csv = buildTelemetryCsv(orderedTelemetryEvents);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "milesmapped-telemetry.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleClearTelemetry = () => {
+    const confirmed = window.confirm(
+      "Clear telemetry events stored in this browser?"
+    );
+    if (!confirmed) {
+      return;
+    }
+    clearTelemetryEvents();
+    setTelemetryEvents([]);
+  };
+
+  const handleRefreshTelemetry = () => {
+    setTelemetryEvents(getTelemetryEvents());
   };
 
   const handleIntegrationChange = (
@@ -449,6 +496,70 @@ export default function SettingsPage() {
                       className="py-10 text-center text-sm text-slate-500"
                     >
                       No audit entries match the selected filters.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>Telemetry</CardTitle>
+              <CardDescription>
+                Event snapshots stored locally in your browser (up to 500 events).
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={handleRefreshTelemetry}>
+                Refresh
+              </Button>
+              <Button variant="outline" onClick={handleExportTelemetry}>
+                Export CSV
+              </Button>
+              <Button variant="outline" onClick={handleClearTelemetry}>
+                Clear
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-slate-200">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Payload</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orderedTelemetryEvents.length ? (
+                  orderedTelemetryEvents.map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell className="text-xs text-slate-600">
+                        {new Date(event.timestamp).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-700">
+                        {event.name}
+                      </TableCell>
+                      <TableCell className="max-w-xs text-xs text-slate-500">
+                        <pre className="whitespace-pre-wrap font-sans">
+                          {JSON.stringify(event.payload ?? {}, null, 2)}
+                        </pre>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={3}
+                      className="py-10 text-center text-sm text-slate-500"
+                    >
+                      No telemetry events stored yet.
                     </TableCell>
                   </TableRow>
                 )}

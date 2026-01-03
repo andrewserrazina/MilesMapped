@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { logError } from "@/lib/log";
+import { emitEvent } from "@/lib/telemetry/events";
 import { cn } from "@/lib/utils";
 
 export default function GlobalError({
@@ -15,6 +16,9 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     logError(error);
+    emitEvent("error_boundary", {
+      errorId: error.digest ?? "unknown",
+    });
   }, [error]);
 
   return (
