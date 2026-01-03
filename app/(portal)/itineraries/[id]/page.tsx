@@ -95,10 +95,7 @@ export default function ItineraryDetailPage() {
       return;
     }
 
-    portalRepo.updateItinerary(itinerary.id, (current) => ({
-      ...current,
-      shareToken: generateShareToken(),
-    }));
+    portalRepo.regenerateShareToken(itinerary.id);
     setShareStatus("idle");
   };
 

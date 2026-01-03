@@ -353,7 +353,7 @@ export default function TripDetailPage() {
     );
 
     const newItinerary: Itinerary = {
-      id: `itinerary_${Date.now()}`,
+      id: crypto.randomUUID(),
       tripId: trip.id,
       generatedAt: new Date().toISOString(),
       optionAId: pinnedOption.id,
