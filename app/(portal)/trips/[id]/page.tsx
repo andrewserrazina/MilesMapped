@@ -23,6 +23,7 @@ import { tripStatusOrder } from "@/lib/mock/data";
 import { logError } from "@/lib/log";
 import { portalRepo } from "@/lib/portalRepo";
 import { generateShareToken } from "@/lib/shareTokens";
+import { emitEvent } from "@/lib/telemetry/events";
 import {
   countCompletedIntake,
   getItineraryGenerationRule,
@@ -253,6 +254,10 @@ export default function TripDetailPage() {
       return;
     }
     if (!can(currentUser, "award.add")) {
+      emitEvent("permission_denied", {
+        actionId: "award.add",
+        tripId: trip.id,
+      });
       return;
     }
 
@@ -262,6 +267,10 @@ export default function TripDetailPage() {
       try {
         await portalRepo.addAwardOption(trip.id, created);
         setNewlyAddedOptionId(created.id);
+        emitEvent("award_added", {
+          tripId: trip.id,
+          awardId: created.id,
+        });
       } catch (error) {
         logError("Failed to add award option", error);
         setToastMessage("Failed to add award option. Please try again.");
@@ -289,6 +298,10 @@ export default function TripDetailPage() {
       return;
     }
     if (!can(currentUser, "award.add")) {
+      emitEvent("permission_denied", {
+        actionId: "award.add",
+        tripId: trip.id,
+      });
       return;
     }
 
@@ -298,6 +311,10 @@ export default function TripDetailPage() {
       setImportModalOpen(false);
       setToastMessage("Award option imported.");
       setNewlyAddedOptionId(created.id);
+      emitEvent("award_added", {
+        tripId: trip.id,
+        awardId: created.id,
+      });
     } catch (error) {
       logError("Failed to import award option", error);
       setToastMessage("Failed to import award option. Please try again.");
@@ -320,6 +337,10 @@ export default function TripDetailPage() {
       return;
     }
     if (!can(currentUser, "itinerary.generate")) {
+      emitEvent("permission_denied", {
+        actionId: "itinerary.generate",
+        tripId: trip.id,
+      });
       return;
     }
     if (!pinnedOption) {
@@ -341,6 +362,11 @@ export default function TripDetailPage() {
     };
 
     portalRepo.createItinerary(newItinerary);
+    emitEvent("itinerary_generated", {
+      tripId: trip.id,
+      itineraryId: newItinerary.id,
+      backupCount: backupOptions.length,
+    });
     router.push(`/itineraries/${newItinerary.id}`);
   };
 
@@ -385,41 +411,65 @@ export default function TripDetailPage() {
         assignedAgentName={trip.assignedAgentName}
         agentOptions={agentOptions}
         sopLinkHref={sopArticleHref}
-        onStatusChange={(nextStatus: TripStatus) =>
-          portalRepo.updateTrip(trip.id, (current) => {
-            if (!canEditTrip) {
-              if (
-                (nextStatus === "Sent" && !canMarkSent) ||
-                (nextStatus === "Booked" && !canMarkBooked)
-              ) {
-                return current;
-              }
-              if (nextStatus !== "Sent" && nextStatus !== "Booked") {
-                return current;
-              }
+        onStatusChange={(nextStatus: TripStatus) => {
+          if (nextStatus === trip.status) {
+            return;
+          }
+          if (!canEditTrip) {
+            if (
+              nextStatus === "Sent" &&
+              !canMarkSent
+            ) {
+              emitEvent("permission_denied", {
+                actionId: "trip.markSent",
+                tripId: trip.id,
+              });
+              return;
             }
-
-            if (!canCloseTrip && nextStatus === "Closed") {
-              return current;
+            if (
+              nextStatus === "Booked" &&
+              !canMarkBooked
+            ) {
+              emitEvent("permission_denied", {
+                actionId: "trip.markBooked",
+                tripId: trip.id,
+              });
+              return;
             }
-
-            const sopRule = getStatusTransitionRule(
-              current,
-              nextStatus,
-              itineraries
-            );
-            if (!sopRule.allowed) {
-              setSopWarning(sopRule.reason ?? "SOP requirements are not met.");
-              return current;
+            if (nextStatus !== "Sent" && nextStatus !== "Booked") {
+              emitEvent("permission_denied", {
+                actionId: "trip.edit",
+                tripId: trip.id,
+              });
+              return;
             }
+          }
 
-            setSopWarning(null);
-            return {
-              ...current,
-              status: nextStatus,
-            };
-          })
-        }
+          if (!canCloseTrip && nextStatus === "Closed") {
+            emitEvent("permission_denied", {
+              actionId: "trip.close",
+              tripId: trip.id,
+            });
+            return;
+          }
+
+          const sopRule = getStatusTransitionRule(trip, nextStatus, itineraries);
+          if (!sopRule.allowed) {
+            setSopWarning(sopRule.reason ?? "SOP requirements are not met.");
+            return;
+          }
+
+          setSopWarning(null);
+          portalRepo.updateTrip(trip.id, (current) => ({
+            ...current,
+            status: nextStatus,
+          }));
+          emitEvent("status_changed", {
+            tripId: trip.id,
+            previousStatus: trip.status,
+            nextStatus,
+          });
+        }}
         onAssignedAgentChange={(nextAgent) =>
           portalRepo.updateTrip(trip.id, (current) => {
             if (!canAssignAgent) {
@@ -778,9 +828,20 @@ export default function TripDetailPage() {
                       option={option}
                       isPinned={isPinned}
                       isReadOnly={isClosed || !can(currentUser, "award.add")}
-                      onPin={() =>
-                        portalRepo.setPinnedAwardOption(trip.id, option.id)
-                      }
+                      onPin={() => {
+                        if (!can(currentUser, "award.add")) {
+                          emitEvent("permission_denied", {
+                            actionId: "award.add",
+                            tripId: trip.id,
+                          });
+                          return;
+                        }
+                        portalRepo.setPinnedAwardOption(trip.id, option.id);
+                        emitEvent("award_pinned", {
+                          tripId: trip.id,
+                          awardId: option.id,
+                        });
+                      }}
                       onEdit={() =>
                           setAwardModalState({
                             open: true,

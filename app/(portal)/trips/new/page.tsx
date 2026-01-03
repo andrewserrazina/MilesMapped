@@ -19,6 +19,7 @@ import { defaultTripIntake, type ClientPreferences, type Trip } from "@/lib/type
 import { portalRepo } from "@/lib/portalRepo";
 import { useCurrentUser } from "@/lib/auth/mockAuth";
 import { can } from "@/lib/auth/permissions";
+import { emitEvent } from "@/lib/telemetry/events";
 
 const cabinOptions: ClientPreferences["cabinPref"][] = [
   "Economy",
@@ -118,6 +119,9 @@ export default function NewTripPage() {
       return;
     }
     if (!canCreateTrip) {
+      emitEvent("permission_denied", {
+        actionId: "trip.create",
+      });
       return;
     }
 
@@ -140,6 +144,11 @@ export default function NewTripPage() {
     };
 
     portalRepo.createTrip(newTrip);
+    emitEvent("trip_created", {
+      tripId: newTrip.id,
+      clientId: newTrip.clientId,
+      status: newTrip.status,
+    });
     router.push(`/trips/${newTrip.id}`);
   };
 

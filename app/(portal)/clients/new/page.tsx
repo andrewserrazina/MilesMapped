@@ -19,6 +19,7 @@ import type { Client, ClientStatus } from "@/lib/types";
 import { portalRepo } from "@/lib/portalRepo";
 import { useCurrentUser } from "@/lib/auth/mockAuth";
 import { can } from "@/lib/auth/permissions";
+import { emitEvent } from "@/lib/telemetry/events";
 
 const statusOptions: ClientStatus[] = ["Lead", "Active", "Completed"];
 
@@ -64,6 +65,9 @@ export default function NewClientPage() {
       return;
     }
     if (!canCreateClient) {
+      emitEvent("permission_denied", {
+        actionId: "client.create",
+      });
       return;
     }
 
@@ -91,6 +95,10 @@ export default function NewClientPage() {
     };
 
     portalRepo.createClient(newClient);
+    emitEvent("client_created", {
+      clientId: newClient.id,
+      status: newClient.status,
+    });
     router.push(`/clients/${newClient.id}`);
   };
 
