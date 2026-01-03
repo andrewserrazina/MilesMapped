@@ -8,6 +8,7 @@ import type {
   KnowledgeArticle,
   Trip,
 } from "@/lib/types";
+import { generateShareToken } from "@/lib/shareTokens";
 import {
   addAwardOption as addAwardOptionToStore,
   addClient,
@@ -77,6 +78,14 @@ export const localRepo = {
   ) => {
     updateItinerary(itineraryId, updater);
   },
+  regenerateShareToken: (itineraryId: string) => {
+    const token = generateShareToken();
+    updateItinerary(itineraryId, (current) => ({
+      ...current,
+      shareToken: token,
+    }));
+    return token;
+  },
 
   listKnowledgeArticles: (
     data?: PortalData | null
@@ -100,10 +109,26 @@ export const localRepo = {
   listCommunicationEntries: (
     data?: PortalData | null
   ): PortalData["communicationEntries"] => data?.communicationEntries ?? [],
+  listCommunications: (
+    clientId: string,
+    tripId?: string,
+    data?: PortalData | null
+  ) =>
+    (data?.communicationEntries ?? []).filter((entry) => {
+      if (entry.clientId !== clientId) {
+        return false;
+      }
+      if (tripId && entry.tripId !== tripId) {
+        return false;
+      }
+      return true;
+    }),
   createCommunicationEntry: (entry: CommunicationEntry) => {
     addCommunicationEntry(entry);
     return entry;
   },
+  createCommunication: (entry: CommunicationEntry) =>
+    localRepo.createCommunicationEntry(entry),
 
   listAuditLog: (data?: PortalData | null) => data?.auditLog ?? [],
   clearAuditLog: (actor: { name: string; role: string }) =>

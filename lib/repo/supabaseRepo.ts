@@ -20,6 +20,7 @@ import {
   type PortalData,
 } from "@/lib/portalStore";
 import { logError, logWarn } from "@/lib/log";
+import { generateShareToken } from "@/lib/shareTokens";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
 
 const supabaseWarning = isSupabaseConfigured
@@ -115,15 +116,39 @@ type SupabaseAwardOptionRow = {
   created_at: string;
 };
 
+type SupabaseItineraryRow = {
+  id: string;
+  trip_id: string;
+  generated_at: string;
+  option_a_id: string;
+  backup_option_ids: string[] | null;
+  share_token: string | null;
+  notes: string | null;
+};
+
+type SupabaseCommunicationRow = {
+  id: string;
+  client_id: string;
+  trip_id: string | null;
+  type: string;
+  summary: string;
+  created_at: string;
+  created_by: string | null;
+};
+
 type SupabaseState = {
   clients: Client[];
   trips: Trip[];
+  itineraries: Itinerary[];
+  communicationEntries: CommunicationEntry[];
   isHydrated: boolean;
 };
 
 let supabaseState: SupabaseState = {
   clients: [],
   trips: [],
+  itineraries: [],
+  communicationEntries: [],
   isHydrated: false,
 };
 
@@ -143,6 +168,8 @@ const getSupabaseSnapshot = () => supabaseState;
 const supabaseServerSnapshot: SupabaseState = {
   clients: [],
   trips: [],
+  itineraries: [],
+  communicationEntries: [],
   isHydrated: false,
 };
 
@@ -203,6 +230,28 @@ const mapTripRow = (
     pinnedAwardOptionId: row.pinned_award_option_id ?? undefined,
     ...(clientName ? { clientName } : {}),
   } as Trip);
+
+const mapItineraryRow = (row: SupabaseItineraryRow): Itinerary => ({
+  id: row.id,
+  tripId: row.trip_id,
+  generatedAt: row.generated_at,
+  optionAId: row.option_a_id,
+  backupOptionIds: row.backup_option_ids ?? [],
+  shareToken: row.share_token ?? undefined,
+  notes: row.notes ?? undefined,
+});
+
+const mapCommunicationRow = (
+  row: SupabaseCommunicationRow
+): CommunicationEntry => ({
+  id: row.id,
+  clientId: row.client_id,
+  tripId: row.trip_id ?? undefined,
+  type: row.type,
+  summary: row.summary,
+  createdAt: row.created_at,
+  createdBy: row.created_by ?? "System",
+});
 
 const buildTripsFromRows = (
   tripRows: SupabaseTripRow[],
@@ -303,6 +352,35 @@ const toAwardOptionInsert = (tripId: string, option: AwardOption) => ({
   created_at: option.createdAt,
 });
 
+const toItineraryInsert = (itinerary: Itinerary) => ({
+  id: itinerary.id,
+  trip_id: itinerary.tripId,
+  generated_at: itinerary.generatedAt,
+  option_a_id: itinerary.optionAId,
+  backup_option_ids: itinerary.backupOptionIds ?? [],
+  share_token: itinerary.shareToken ?? null,
+  notes: itinerary.notes ?? null,
+});
+
+const toItineraryUpdate = (itinerary: Itinerary) => ({
+  trip_id: itinerary.tripId,
+  generated_at: itinerary.generatedAt,
+  option_a_id: itinerary.optionAId,
+  backup_option_ids: itinerary.backupOptionIds ?? [],
+  share_token: itinerary.shareToken ?? null,
+  notes: itinerary.notes ?? null,
+});
+
+const toCommunicationInsert = (entry: CommunicationEntry) => ({
+  id: entry.id,
+  client_id: entry.clientId,
+  trip_id: entry.tripId ?? null,
+  type: entry.type,
+  summary: entry.summary,
+  created_at: entry.createdAt,
+  created_by: null,
+});
+
 const toAwardOptionPatch = (patch: Partial<AwardOption>) => {
   const update: Partial<SupabaseAwardOptionRow> = {};
 
@@ -355,7 +433,13 @@ const hydrateSupabaseState = async () => {
     return;
   }
 
-  const [clientsResult, tripsResult, awardOptionsResult] =
+  const [
+    clientsResult,
+    tripsResult,
+    awardOptionsResult,
+    itinerariesResult,
+    communicationsResult,
+  ] =
     await Promise.all([
       supabase.from("clients").select("*").order("created_at", {
         ascending: false,
@@ -364,6 +448,12 @@ const hydrateSupabaseState = async () => {
         ascending: false,
       }),
       supabase.from("award_options").select("*").order("created_at", {
+        ascending: false,
+      }),
+      supabase.from("itineraries").select("*").order("generated_at", {
+        ascending: false,
+      }),
+      supabase.from("communications").select("*").order("created_at", {
         ascending: false,
       }),
     ]);
@@ -377,6 +467,12 @@ const hydrateSupabaseState = async () => {
   if (awardOptionsResult.error) {
     logError("Failed to load award options", awardOptionsResult.error);
   }
+  if (itinerariesResult.error) {
+    logError("Failed to load itineraries", itinerariesResult.error);
+  }
+  if (communicationsResult.error) {
+    logError("Failed to load communications", communicationsResult.error);
+  }
 
   const clients = (clientsResult.data ?? []).map(mapClientRow);
   const trips = buildTripsFromRows(
@@ -384,8 +480,19 @@ const hydrateSupabaseState = async () => {
     awardOptionsResult.data ?? [],
     clients
   );
+  const itineraries = (itinerariesResult.data ?? []).map(mapItineraryRow);
+  const communicationEntries = (communicationsResult.data ?? []).map(
+    mapCommunicationRow
+  );
 
-  setSupabaseState((prev) => ({ ...prev, clients, trips, isHydrated: true }));
+  setSupabaseState((prev) => ({
+    ...prev,
+    clients,
+    trips,
+    itineraries,
+    communicationEntries,
+    isHydrated: true,
+  }));
 };
 
 const updateTripState = (tripId: string, updater: (trip: Trip) => Trip) => {
@@ -432,7 +539,32 @@ const updateClientState = (
   return nextClient;
 };
 
+const updateItineraryState = (
+  itineraryId: string,
+  updater: (itinerary: Itinerary) => Itinerary
+) => {
+  let nextItinerary: Itinerary | null = null;
+  setSupabaseState((prev) => {
+    const itinerary = prev.itineraries.find((item) => item.id === itineraryId);
+    if (!itinerary) {
+      return prev;
+    }
+    const updatedItinerary = updater(itinerary);
+    nextItinerary = updatedItinerary;
+    return {
+      ...prev,
+      itineraries: prev.itineraries.map((item) =>
+        item.id === itineraryId ? updatedItinerary : item
+      ),
+    };
+  });
+  return nextItinerary;
+};
+
 const refreshTripClientName = (trip: Trip) => withClientName(trip);
+
+const shareTokenFetches = new Set<string>();
+const missingShareTokens = new Set<string>();
 
 export const supabaseRepo = {
   dataMode: "supabase" as const,
@@ -536,9 +668,32 @@ export const supabaseRepo = {
     return trip;
   },
   updateTrip: (tripId: string, updater: (trip: Trip) => Trip) => {
+    const previousTrip = supabaseState.trips.find((item) => item.id === tripId);
     const updatedTrip = updateTripState(tripId, updater);
     if (!updatedTrip || !supabase || isTripReadOnly(updatedTrip)) {
       return;
+    }
+
+    if (
+      previousTrip &&
+      previousTrip.status !== updatedTrip.status &&
+      (updatedTrip.status === "Sent" ||
+        updatedTrip.status === "Booked" ||
+        updatedTrip.status === "Closed")
+    ) {
+      const entryId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `comm_${Date.now()}`;
+      supabaseRepo.createCommunicationEntry({
+        id: entryId,
+        clientId: updatedTrip.clientId,
+        tripId: updatedTrip.id,
+        type: "Status Update",
+        summary: `Trip marked ${updatedTrip.status}.`,
+        createdAt: new Date().toISOString(),
+        createdBy: "System",
+      });
     }
 
     void supabase
@@ -552,36 +707,119 @@ export const supabaseRepo = {
       });
   },
 
-  listItineraries: (data?: PortalData | null) =>
-    // TODO: Replace with Supabase SELECT on itineraries.
-    notImplementedValue(data?.itineraries ?? []),
+  listItineraries: (data?: PortalData | null) => data?.itineraries ?? [],
   getItinerary: (data: PortalData | null | undefined, id: string) =>
-    // TODO: Replace with Supabase SELECT by id.
-    notImplementedValue(
-      data?.itineraries.find((itinerary) => itinerary.id === id) ?? null
-    ),
+    data?.itineraries.find((itinerary) => itinerary.id === id) ?? null,
   getItineraryByShareToken: (
     data: PortalData | null | undefined,
     token: string
-  ) =>
-    // TODO: Replace with Supabase SELECT by share token.
-    notImplementedValue(
+  ) => {
+    const match =
       data?.itineraries.find((itinerary) => itinerary.shareToken === token) ??
-        null
-    ),
-  createItinerary: (_itinerary: Itinerary) => {
-    // TODO: Replace with Supabase INSERT for itineraries.
-    markUnused(_itinerary);
-    return notImplementedError();
+      null;
+    if (supabase && !missingShareTokens.has(token) && !shareTokenFetches.has(token)) {
+      shareTokenFetches.add(token);
+      void supabase
+        .from("itineraries")
+        .select("*")
+        .eq("share_token", token)
+        .maybeSingle()
+        .then(({ data: row, error }) => {
+          shareTokenFetches.delete(token);
+          if (error) {
+            logError("Failed to load itinerary by share token", error);
+            return;
+          }
+          if (!row) {
+            missingShareTokens.add(token);
+            setSupabaseState((prev) => ({ ...prev }));
+            return;
+          }
+          const mapped = mapItineraryRow(row as SupabaseItineraryRow);
+          setSupabaseState((prev) => {
+            if (prev.itineraries.some((item) => item.id === mapped.id)) {
+              return prev;
+            }
+            return { ...prev, itineraries: [mapped, ...prev.itineraries] };
+          });
+        });
+    }
+    return match;
+  },
+  createItinerary: (itinerary: Itinerary) => {
+    if (!supabase) {
+      return itinerary;
+    }
+
+    setSupabaseState((prev) => ({
+      ...prev,
+      itineraries: [itinerary, ...prev.itineraries],
+    }));
+
+    void supabase
+      .from("itineraries")
+      .insert(toItineraryInsert(itinerary))
+      .select("*")
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          logError("Failed to create itinerary", error);
+          return;
+        }
+        if (!data) {
+          return;
+        }
+        const mapped = mapItineraryRow(data as SupabaseItineraryRow);
+        setSupabaseState((prev) => ({
+          ...prev,
+          itineraries: prev.itineraries.map((item) =>
+            item.id === mapped.id ? mapped : item
+          ),
+        }));
+      });
+
+    return itinerary;
   },
   updateItinerary: (
-    _itineraryId: string,
-    _updater: (itinerary: Itinerary) => Itinerary
+    itineraryId: string,
+    updater: (itinerary: Itinerary) => Itinerary
   ) => {
-    // TODO: Replace with Supabase UPDATE for itineraries.
-    markUnused(_itineraryId, _updater);
-    return notImplementedError();
+    const updatedItinerary = updateItineraryState(itineraryId, updater);
+    if (!updatedItinerary || !supabase) {
+      return;
+    }
+
+    void supabase
+      .from("itineraries")
+      .update(toItineraryUpdate(updatedItinerary))
+      .eq("id", itineraryId)
+      .then(({ error }) => {
+        if (error) {
+          logError("Failed to update itinerary", error);
+        }
+      });
   },
+  regenerateShareToken: (itineraryId: string) => {
+    const nextToken = generateShareToken();
+    const updatedItinerary = updateItineraryState(itineraryId, (current) => ({
+      ...current,
+      shareToken: nextToken,
+    }));
+    if (!updatedItinerary || !supabase) {
+      return nextToken;
+    }
+    void supabase
+      .from("itineraries")
+      .update({ share_token: nextToken })
+      .eq("id", itineraryId)
+      .then(({ error }) => {
+        if (error) {
+          logError("Failed to regenerate share token", error);
+        }
+      });
+    return nextToken;
+  },
+  isShareTokenMissing: (token: string) => missingShareTokens.has(token),
 
   listKnowledgeArticles: (data?: PortalData | null) =>
     // TODO: Replace with Supabase SELECT on knowledge articles.
@@ -606,13 +844,55 @@ export const supabaseRepo = {
   },
 
   listCommunicationEntries: (data?: PortalData | null) =>
-    // TODO: Replace with Supabase SELECT on communication entries.
-    notImplementedValue(data?.communicationEntries ?? []),
-  createCommunicationEntry: (_entry: CommunicationEntry) => {
-    // TODO: Replace with Supabase INSERT for communication entries.
-    markUnused(_entry);
-    return notImplementedError();
+    data?.communicationEntries ?? [],
+  listCommunications: (clientId: string, tripId?: string) => {
+    const entries = supabaseState.communicationEntries.filter((entry) => {
+      if (entry.clientId !== clientId) {
+        return false;
+      }
+      if (tripId && entry.tripId !== tripId) {
+        return false;
+      }
+      return true;
+    });
+    return entries;
   },
+  createCommunicationEntry: (entry: CommunicationEntry) => {
+    if (!supabase) {
+      return entry;
+    }
+
+    setSupabaseState((prev) => ({
+      ...prev,
+      communicationEntries: [entry, ...prev.communicationEntries],
+    }));
+
+    void supabase
+      .from("communications")
+      .insert(toCommunicationInsert(entry))
+      .select("*")
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          logError("Failed to create communication entry", error);
+          return;
+        }
+        if (!data) {
+          return;
+        }
+        const mapped = mapCommunicationRow(data as SupabaseCommunicationRow);
+        setSupabaseState((prev) => ({
+          ...prev,
+          communicationEntries: prev.communicationEntries.map((item) =>
+            item.id === mapped.id ? mapped : item
+          ),
+        }));
+      });
+
+    return entry;
+  },
+  createCommunication: (entry: CommunicationEntry) =>
+    supabaseRepo.createCommunicationEntry(entry),
 
   listAuditLog: (data?: PortalData | null) =>
     // TODO: Replace with Supabase SELECT on audit log.
@@ -651,6 +931,8 @@ export const supabaseRepo = {
           ...prev,
           clients: base.data?.clients ?? [],
           trips: base.data?.trips ?? [],
+          itineraries: base.data?.itineraries ?? [],
+          communicationEntries: base.data?.communicationEntries ?? [],
           isHydrated: true,
         }));
         return;
@@ -674,6 +956,12 @@ export const supabaseRepo = {
           trips: isSupabaseConfigured
             ? supabaseSnapshot.trips
             : base.data.trips,
+          itineraries: isSupabaseConfigured
+            ? supabaseSnapshot.itineraries
+            : base.data.itineraries,
+          communicationEntries: isSupabaseConfigured
+            ? supabaseSnapshot.communicationEntries
+            : base.data.communicationEntries,
         }
       : null;
 

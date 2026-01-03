@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useParams } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AwardOption } from "@/lib/types";
@@ -81,25 +81,32 @@ export default function ShareItineraryPage() {
   }
 
   if (!itinerary || !trip || !client) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-4">
-            <div className="text-sm font-semibold text-slate-900">MilesMapped</div>
-            <div className="text-xs uppercase tracking-wide text-slate-400">
-              Prepared by MilesMapped
+    if (
+      portalRepo.dataMode === "supabase" &&
+      portalRepo.isShareTokenMissing &&
+      !portalRepo.isShareTokenMissing(params.token)
+    ) {
+      return (
+        <div className="min-h-screen bg-slate-50">
+          <header className="border-b border-slate-200 bg-white">
+            <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-4">
+              <div className="text-sm font-semibold text-slate-900">MilesMapped</div>
+              <div className="text-xs uppercase tracking-wide text-slate-400">
+                Prepared by MilesMapped
+              </div>
             </div>
-          </div>
-        </header>
-        <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-8">
-          <Card>
-            <CardContent className="p-6 text-sm text-slate-500">
-              Itinerary not found.
-            </CardContent>
-          </Card>
-        </main>
-      </div>
-    );
+          </header>
+          <main className="mx-auto w-full max-w-5xl space-y-6 px-6 py-8">
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <div className="h-4 w-36 animate-pulse rounded bg-slate-200" />
+              <div className="mt-4 h-8 w-2/3 animate-pulse rounded bg-slate-100" />
+              <div className="mt-6 h-32 w-full animate-pulse rounded bg-slate-100" />
+            </div>
+          </main>
+        </div>
+      );
+    }
+    notFound();
   }
 
   return (
