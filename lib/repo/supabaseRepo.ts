@@ -668,7 +668,9 @@ export const supabaseRepo = {
     return trip;
   },
   updateTrip: (tripId: string, updater: (trip: Trip) => Trip) => {
-    const previousTrip = supabaseState.trips.find((item) => item.id === tripId);
+    const previousTrip: Trip | undefined = supabaseState.trips.find(
+      (item) => item.id === tripId
+    );
     const updatedTrip = updateTripState(tripId, updater);
     if (!updatedTrip || !supabase || isTripReadOnly(updatedTrip)) {
       return;
